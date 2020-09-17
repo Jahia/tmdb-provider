@@ -27,5 +27,6 @@ public class TMDBTokenAction extends Action {
         r.put("token",token);
         r.put("url","http://www.themoviedb.org/authenticate/"+token);
         return new ActionResult(200, null, r);
+
     }
 }

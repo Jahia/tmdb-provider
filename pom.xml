@@ -5,19 +5,22 @@
   <parent>
     <groupId>org.jahia.modules</groupId>
     <artifactId>jahia-modules</artifactId>
-    <version>7.1.0.0</version>
+    <version>8.0.0.0</version>
   </parent>
-  <groupId>org.jahia.modules</groupId>
+  <groupId>org.jahia.demo</groupId>
   <artifactId>tmdb-provider</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>2.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
   <name>tmdb-provider</name>
   <description>This is the custom module (tmdb-provider) for running on a Jahia xCM server.</description>
-
   <scm>
     <connection>scm:git:git@github.com:tdraier/tmdb-provider.git</connection>
     <developerConnection>scm:git:git@github.com:tdraier/tmdb-provider.git</developerConnection>
   </scm>
+  <properties>
+    <require-capability>osgi.extender;filter:="(osgi.extender=org.jahia.bundles.blueprint.extender.config)"</require-capability>
+    <jahia-depends>default,bootstrap3-components,bootstrap3-core,external-provider</jahia-depends>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>org.jahia.modules</groupId>
@@ -49,46 +52,45 @@
         <configuration>
           <instructions>
             <Import-Package>
-    org.jahia.modules.external; version="[2.0,4)",
-    org.jahia.modules.external.query; version="[2.0,4)",
-    javax.jcr,
-    org.jahia.services.content,
-    org.jahia.services.content.nodetypes,
-    org.jahia.services.render,
-    com.google.common.collect,
-    javax.jcr.query.qom,
-    javax.servlet.http,
-    net.sf.ehcache,
-    org.apache.commons.httpclient,
-    org.apache.commons.httpclient.methods,
-    org.apache.commons.httpclient.params,
-    org.apache.commons.lang,
-    org.jahia.bin,
-    org.jahia.services.cache.ehcache,
-    org.json,
-    org.jahia.taglibs.template.pager,
-    org.jahia.defaults.config.spring,
-    org.apache.taglibs.standard.tei,
-    org.jahia.taglibs.user,
-    org.jahia.taglibs.template,
-    org.jahia.taglibs.template.gwt,
-    org.jahia.taglibs.query,
-    org.jahia.taglibs.jcr,
-    org.jahia.taglibs.jcr.query,
-    org.apache.taglibs.standard.functions,
-    org.jahia.taglibs.jcr.node,
-    org.jahia.taglibs.template.include,
-    org.jahia.services.content.decorator,
-    org.apache.taglibs.standard.tag.rt.core,
-    org.jahia.taglibs.template.layoutmanager,
-    org.apache.taglibs.standard.tag.common.core,
-    org.jahia.taglibs,
-    org.jahia.exceptions,
-    org.jahia.services,
-    org.jahia.services.render.scripting,
-    org.joda.time
+              org.jahia.modules.external; version="[2.0,5)",
+              org.jahia.modules.external.query; version="[2.0,5)",
+              javax.jcr,
+              org.jahia.services.content,
+              org.jahia.services.content.nodetypes,
+              org.jahia.services.render,
+              com.google.common.collect,
+              javax.jcr.query.qom,
+              javax.servlet.http,
+              net.sf.ehcache,
+              org.apache.commons.httpclient,
+              org.apache.commons.httpclient.methods,
+              org.apache.commons.httpclient.params,
+              org.apache.commons.lang,
+              org.jahia.bin,
+              org.jahia.services.cache.ehcache,
+              org.json,
+              org.jahia.taglibs.template.pager,
+              org.jahia.defaults.config.spring,
+              org.apache.taglibs.standard.tei,
+              org.jahia.taglibs.user,
+              org.jahia.taglibs.template,
+              org.jahia.taglibs.template.gwt,
+              org.jahia.taglibs.query,
+              org.jahia.taglibs.jcr,
+              org.jahia.taglibs.jcr.query,
+              org.apache.taglibs.standard.functions,
+              org.jahia.taglibs.jcr.node,
+              org.jahia.taglibs.template.include,
+              org.jahia.services.content.decorator,
+              org.apache.taglibs.standard.tag.rt.core,
+              org.jahia.taglibs.template.layoutmanager,
+              org.apache.taglibs.standard.tag.common.core,
+              org.jahia.taglibs,
+              org.jahia.exceptions,
+              org.jahia.services,
+              org.jahia.services.render.scripting,
+              org.joda.time
             </Import-Package>
-            <Jahia-Depends>default,bootstrap-components,bootstrap,external-provider</Jahia-Depends>
             <_removeheaders>${jahia.modules.bundle.removeheaders},
                             Jahia-Static-Resources</_removeheaders>
           </instructions>
