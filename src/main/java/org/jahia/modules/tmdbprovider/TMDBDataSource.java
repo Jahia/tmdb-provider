@@ -4,7 +4,6 @@ import com.google.common.collect.Sets;
 import net.sf.ehcache.CacheException;
 import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
-import org.apache.commons.httpclient.HostConfiguration;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpURL;
 import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
@@ -26,6 +25,8 @@ import org.joda.time.DateTime;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jcr.*;
 import java.util.*;
@@ -33,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.LazyProperty, ExternalDataSource.Searchable {
+    private static final Logger logger = LoggerFactory.getLogger(TMDBDataSource.class);
     public static final HashSet<String> LAZY_PROPERTIES = Sets.newHashSet("original_title", "homepage", "status", "runtime", "imdb_id", "budget", "revenue");
     public static final HashSet<String> LAZY_I18N_PROPERTIES = Sets.newHashSet("jcr:title", "overview", "tagline", "poster_path");
 
@@ -69,11 +71,11 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         HttpConnectionManagerParams cmParams = new HttpConnectionManagerParams();
         cmParams.setConnectionTimeout(15000);
         cmParams.setSoTimeout(60000);
-        cmParams.setDefaultMaxConnectionsPerHost(5);
+        cmParams.setDefaultMaxConnectionsPerHost(10);
 
         MultiThreadedHttpConnectionManager httpConnectionManager = new MultiThreadedHttpConnectionManager();
         httpConnectionManager.setParams(cmParams);
-        httpClient = new HttpClient(params,httpConnectionManager);
+        httpClient = new HttpClient(params, httpConnectionManager);
     }
 
     public void setHttpClient(HttpClient httpClient) {
@@ -94,10 +96,8 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                 ehCacheProvider.getCacheManager().addCache("tmdb-cache");
             }
             cache = ehCacheProvider.getCacheManager().getCache("tmdb-cache");
-        } catch (IllegalStateException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        } catch (CacheException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        } catch (IllegalStateException | CacheException e) {
+            logger.error("Error while initializing cache for IMDB", e);
         }
     }
 
@@ -253,56 +253,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                 } catch (NumberFormatException e) {
                     throw new ItemNotFoundException(identifier);
                 }
-                JSONObject movie;
-
-                String lang = "en";
-                if (cache.get("movie-" + movieId) != null) {
-                    movie = new JSONObject((String) cache.get("movie-" + movieId).getObjectValue());
-                } else if (cache.get("fullmovie-" + lang + "-" + movieId) != null) {
-                    movie = new JSONObject((String) cache.get("fullmovie-" + lang + "-" + movieId).getObjectValue());
-                } else {
-                    movie = queryTMDB(API_MOVIE + movieId, "language", lang);
-                    cache.put(new Element("fullmovie-" + lang + "-" + movieId, movie.toString()));
-                }
-
-                JSONObject configuration = getConfiguration();
-                String baseUrl = configuration.getJSONObject("images").getString("base_url");
-
-                Map<String, String[]> properties = new HashMap<String, String[]>();
-                if (!StringUtils.isEmpty(movie.getString("backdrop_path")) && !movie.getString("backdrop_path").equals("null"))
-                    properties.put("backdrop_path", new String[]{baseUrl + configuration.getJSONObject("images").getJSONArray("backdrop_sizes").get(1) + movie.getString("backdrop_path")});
-                if (movie.getString("release_date") != null)
-                    properties.put("release_date", new String[]{movie.getString("release_date") + "T00:00:00.000+00:00"});
-                if (movie.getString("adult") != null) properties.put("adult", new String[]{movie.getString("adult")});
-                if (movie.getString("vote_average") != null)
-                    properties.put("vote_average", new String[]{movie.getString("vote_average")});
-                if (movie.getString("vote_count") != null)
-                    properties.put("vote_count", new String[]{movie.getString("vote_count")});
-                if (movie.getString("popularity") != null)
-                    properties.put("popularity", new String[]{movie.getString("popularity")});
-
-                ExternalData data = new ExternalData(identifier, getPathForMovie(movie), "jnt:movie", properties);
-
-                data.setLazyProperties(new HashSet<String>(LAZY_PROPERTIES));
-
-                Map<String, Set<String>> lazy18 = new HashMap<String, Set<String>>();
-                lazy18.put("en", new HashSet<String>(LAZY_I18N_PROPERTIES));
-                lazy18.put("fr", new HashSet<String>(LAZY_I18N_PROPERTIES));
-                data.setLazyI18nProperties(lazy18);
-                if (cache.get("indexedfullmovie-" + movieId)==null) {
-                    EventService eventService = BundleUtils.getOsgiService(EventService.class, null);
-                    JCRStoreProvider jcrStoreProvider = JCRSessionFactory.getInstance().getProviders().get("TMDBProvider");
-                    CompletableFuture.supplyAsync(() -> {
-                        try {
-                            eventService.sendAddedNodes(Arrays.asList(data), jcrStoreProvider);
-                            cache.put(new Element("indexedfullmovie-" + movieId, "indexed"));
-                        } catch (RepositoryException e) {
-                            e.printStackTrace();
-                        }
-                        return "eventSent";
-                    });
-                }
-                return data;
+                return getMovieData(identifier, movieId);
             } else if (identifier.startsWith("moviecredits-")) {
                 String movieId = StringUtils.substringAfter(identifier, "moviecredits-");
                 String creditsId = StringUtils.substringAfter(movieId, "-");
@@ -464,8 +415,97 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         throw new ItemNotFoundException(identifier);
     }
 
+    private ExternalData getMovieData(String identifier, String movieId) throws JSONException, RepositoryException {
+        JSONObject movie;
+
+        String lang = "en";
+        if (cache.get("movie-" + movieId) != null) {
+            movie = new JSONObject((String) cache.get("movie-" + movieId).getObjectValue());
+        } else if (cache.get("fullmovie-" + lang + "-" + movieId) != null) {
+            movie = new JSONObject((String) cache.get("fullmovie-" + lang + "-" + movieId).getObjectValue());
+        } else {
+            try {
+                movie = queryTMDB(API_MOVIE + movieId, "language", lang);
+                JSONObject keywords = queryTMDB(API_MOVIE + movieId + "/keywords");
+                movie.put("keywords", keywords.getJSONArray("keywords"));
+                cache.put(new Element("fullmovie-" + lang + "-" + movieId, movie.toString()));
+            } catch (RepositoryException | JSONException | IllegalArgumentException | IllegalStateException | CacheException e) {
+                logger.error("Error while getting movie", e);
+                movie = new JSONObject();
+            }
+        }
+
+        Map<String, String[]> properties = null;
+        try {
+            JSONObject configuration = getConfiguration();
+            String baseUrl = configuration.getJSONObject("images").getString("base_url");
+
+            properties = new HashMap<String, String[]>();
+            if (movie.has("backdrop_path") && !movie.getString("backdrop_path").equals("null"))
+                properties.put("backdrop_path", new String[]{baseUrl + configuration.getJSONObject("images").getJSONArray("backdrop_sizes").get(1) + movie.getString("backdrop_path")});
+            if (movie.has("release_date")) {
+                properties.put("release_date", new String[]{movie.getString("release_date") + "T00:00:00.000+00:00"});
+            }
+            if (movie.has("adult")) {
+                properties.put("adult", new String[]{movie.getString("adult")});
+            }
+            if (movie.has("vote_average")) {
+                properties.put("vote_average", new String[]{movie.getString("vote_average")});
+            }
+            if (movie.has("vote_count")) {
+                properties.put("vote_count", new String[]{movie.getString("vote_count")});
+            }
+            if (movie.has("popularity")) {
+                properties.put("popularity", new String[]{movie.getString("popularity")});
+            }
+            if (movie.has("genres")) {
+                JSONArray genres = movie.getJSONArray("genres");
+                String[] strings = new String[genres.length()];
+                for (int i = 0; i < genres.length(); i++) {
+                    JSONObject genre = genres.getJSONObject(i);
+                    strings[i] = genre.getString("name");
+                }
+                properties.put("j:tagList", strings);
+            }
+            //Get keywords
+            if (movie.has("keywords")) {
+                JSONArray keywordsArray = movie.getJSONArray("keywords");
+                String[] strings = new String[keywordsArray.length()];
+                for (int i = 0; i < keywordsArray.length(); i++) {
+                    JSONObject keywordsArrayJSONObject = keywordsArray.getJSONObject(i);
+                    strings[i] = keywordsArrayJSONObject.getString("name");
+                }
+                properties.put("j:keywords", strings);
+            }
+        } catch (JSONException | RepositoryException e) {
+            logger.error("Error while getting movie", e);
+        }
+        ExternalData data = new ExternalData(identifier, getPathForMovie(movie), "jnt:movie", properties);
+
+        data.setLazyProperties(new HashSet<String>(LAZY_PROPERTIES));
+
+        Map<String, Set<String>> lazy18 = new HashMap<String, Set<String>>();
+        lazy18.put("en", new HashSet<String>(LAZY_I18N_PROPERTIES));
+        lazy18.put("fr", new HashSet<String>(LAZY_I18N_PROPERTIES));
+        data.setLazyI18nProperties(lazy18);
+        if (cache.get("indexedfullmovie-" + movieId) == null) {
+            EventService eventService = BundleUtils.getOsgiService(EventService.class, null);
+            JCRStoreProvider jcrStoreProvider = JCRSessionFactory.getInstance().getProviders().get("TMDBProvider");
+            CompletableFuture.supplyAsync(() -> {
+                try {
+                    eventService.sendAddedNodes(Arrays.asList(data), jcrStoreProvider);
+                    cache.put(new Element("indexedfullmovie-" + movieId, "indexed"));
+                } catch (RepositoryException e) {
+                    e.printStackTrace();
+                }
+                return "eventSent";
+            });
+        }
+        return data;
+    }
+
     private String getPathForMovie(JSONObject movie) throws JSONException {
-        if (StringUtils.isEmpty(movie.getString("release_date"))) {
+        if (!movie.has("release_date") || StringUtils.isEmpty(movie.getString("release_date"))) {
             return null;
         }
         return "/movies/" + StringUtils.substringBeforeLast(movie.getString("release_date"), "-").replace("-", "/") + "/" + movie.getString("id");
@@ -577,16 +617,16 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
             url.setQuery(m.keySet().toArray(new String[m.size()]), m.values().toArray(new String[m.size()]));
             long l = System.currentTimeMillis();
-            System.out.println("Start request : " + url);
             GetMethod httpMethod = new GetMethod(url.toString());
             try {
                 httpClient.executeMethod(httpMethod);
                 return new JSONObject(httpMethod.getResponseBodyAsString());
             } finally {
                 httpMethod.releaseConnection();
-                System.out.println("Request " + url + " done in " + (System.currentTimeMillis() - l) + "ms");
+                logger.debug("Request {} executed in {} ms",url, (System.currentTimeMillis() - l));
             }
         } catch (Exception e) {
+            logger.error("Error while querying TMDB", e);
             throw new RepositoryException(e);
         }
     }
@@ -621,9 +661,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                 }
                 return new String[]{""};
             }
-        } catch (JSONException e) {
-            throw new PathNotFoundException(e);
-        } catch (RepositoryException e) {
+        } catch (JSONException | RepositoryException e) {
             throw new PathNotFoundException(e);
         }
         return new String[0];
@@ -663,7 +701,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                     }
                 } else {
                     long pageNumber = query.getOffset() / 20;
-                    if (pageNumber < 100) {
+                    if (pageNumber < 50) {
                         //Return up to the first 2000 most popular movies
                         JSONObject discoverMovies = queryTMDB(API_DISCOVER_MOVIE, "sort_by", "popularity.desc", "page", String.valueOf(pageNumber + 1));
                         if (discoverMovies.has("total_pages") && discoverMovies.has("results")) {
@@ -680,6 +718,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                                 }
                             }
                         }
+                        logger.info("Found {} results from TMDB",results.size());
                     }
                 }
             }

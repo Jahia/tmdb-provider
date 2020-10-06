@@ -3,7 +3,7 @@
 
 [jnt:tokenRequest] > jnt:content, jmix:structuredContent
 
-[jnt:movie] > jnt:content, jmix:structuredContent, mix:title
+[jnt:movie] > jnt:content, jmix:structuredContent, mix:title, jmix:tagged, jmix:keywords
  - overview (string) i18n
  - tagline (string) i18n
  - original_title (string)
