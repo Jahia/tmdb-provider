@@ -1,7 +1,7 @@
 <jnt = 'http://www.jahia.org/jahia/nt/1.0'>
 <jmix = 'http://www.jahia.org/jahia/mix/1.0'>
 
-[jnt:movie] > jnt:content, jmix:structuredContent, mix:title, jmix:tagged, jmix:keywords
+[jnt:movie] > jnt:content, jmix:structuredContent, mix:title, jmix:tagged, jmix:keywords, jmix:mainResource
  - overview (string) i18n
  - tagline (string) i18n
  - original_title (string)
