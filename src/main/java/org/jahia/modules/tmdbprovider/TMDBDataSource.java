@@ -45,7 +45,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     public static final HashSet<String> LAZY_PROPERTIES = Sets.newHashSet("original_title", "homepage", "status", "runtime", "imdb_id", "budget", "revenue");
     public static final HashSet<String> LAZY_I18N_PROPERTIES = Sets.newHashSet("jcr:title", "overview", "tagline", "poster_path");
 
-    public static final HashSet<String> ROOT_NODES = Sets.newHashSet("movies", "lists", "persons");
+    public static final HashSet<String> ROOT_NODES = Sets.newHashSet("movies", "persons");
     public static final int SOCKET_TIMEOUT = 60000;
     public static final int CONNECT_TIMEOUT = 15000;
     public static final int MAX_CONNECTIONS = 10;
@@ -104,7 +104,11 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     }
 
     public void setApiKeyValue(String apiKeyValue) {
-        this.apiKeyValue = apiKeyValue;
+        if (apiKeyValue.startsWith("'")) {
+            this.apiKeyValue = apiKeyValue.replaceAll("'", "");
+        } else {
+            this.apiKeyValue = apiKeyValue;
+        }
     }
 
     public void start() {
@@ -638,6 +642,9 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
             long l = System.currentTimeMillis();
             HttpGet getMethod = new HttpGet(uri);
+            getMethod.setHeader("Authorization",
+                    "Bearer " + apiKeyValue);
+            getMethod.setHeader("Content-Type", "application/json;charset=utf-8");
             CloseableHttpResponse resp = null;
 
             try {
@@ -664,7 +671,6 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     @Override
     public String[] getI18nPropertyValues(String path, String lang, String propertyName) throws PathNotFoundException {
-        String result;
         try {
             JSONObject movie;
             if (path.startsWith("/movies")) {
@@ -681,8 +687,10 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                     JSONObject configuration = getConfiguration();
                     String baseUrl = configuration.getJSONObject("images").getString("base_url");
                     return new String[]{baseUrl + configuration.getJSONObject("images").getJSONArray("poster_sizes").get(1) + movie.getString(propertyName)};
-                } else if (movie.has(propertyName)) {
+                } else if (movie.has(propertyName) && !movie.getString(propertyName).equals("null")) {
                     return new String[]{movie.getString(propertyName)};
+                } else if(propertyName.equals("runtime")) {
+                    return new String[]{"0"};
                 }
                 return new String[]{""};
             }
@@ -726,7 +734,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                     }
                 } else {
                     long pageNumber = query.getOffset() / 20;
-                    if (pageNumber < 50) {
+                    if (pageNumber < 100) {
                         //Return up to the first 2000 most popular movies
                         JSONObject discoverMovies = queryTMDB(API_DISCOVER_MOVIE, "sort_by", "popularity.desc", "page", String.valueOf(pageNumber + 1));
                         if (discoverMovies.has("total_pages") && discoverMovies.has("results")) {
@@ -743,7 +751,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                                 }
                             }
                         }
-                        logger.info("Found {} results from TMDB",results.size());
+                        logger.info("Found {} results from TMDB", results.size());
                     }
                 }
             }

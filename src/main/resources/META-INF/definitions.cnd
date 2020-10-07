@@ -1,20 +1,20 @@
 <jnt = 'http://www.jahia.org/jahia/nt/1.0'>
 <jmix = 'http://www.jahia.org/jahia/mix/1.0'>
 
-[jnt:movie] > jnt:content, jmix:structuredContent, mix:title, jmix:tagged, jmix:keywords, jmix:mainResource
+[jnt:movie] > jnt:content, jmix:structuredContent, mix:title, jmix:tagged, jmix:keywords
  - overview (string) i18n
  - tagline (string) i18n
  - original_title (string)
- - backdrop_path (string) nofulltext
- - poster_path (string) i18n nofulltext
- - homepage (string) nofulltext
+ - backdrop_path (string) fulltextsearchable=no
+ - poster_path (string) i18n fulltextsearchable=no
+ - homepage (string) fulltextsearchable=no
  - release_date (date)
- - status (string) nofulltext
+ - status (string) fulltextsearchable=no
  - runtime (long)
- - spoken_languages (string) multiple nofulltext
+ - spoken_languages (string) multiple fulltextsearchable=no
  - adult (boolean)
- - production_companies (string) multiple nofulltext
- - imdb_id (string) nofulltext
+ - production_companies (string) multiple fulltextsearchable=no
+ - imdb_id (string) fulltextsearchable=no
  - budget (long)
  - revenue (double)
  - vote_average (double)
@@ -35,8 +35,8 @@
  - person (weakreference)
  - name (string)
  - job (string)
- - department (string) nofulltext
- - profile (string) nofulltext
+ - department (string) fulltextsearchable=no
+ - profile (string) fulltextsearchable=no
 
 [jnt:moviesList] > jnt:content, jmix:list, jmix:structuredContent, mix:title
  - poster_path (string)
@@ -45,7 +45,7 @@
 [jnt:moviePerson] > jnt:content, jmix:structuredContent
  - name (string)
  - biography (string)
- - homepage (string) nofulltext
+ - homepage (string) fulltextsearchable=no
  - birthday (date)
  - deathday (date)
- - profile (string) nofulltext
+ - profile (string) fulltextsearchable=no
