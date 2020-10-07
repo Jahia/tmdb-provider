@@ -7,11 +7,6 @@
 
     <osgi:reference id="ExternalProviderInitializerService" interface="org.jahia.modules.external.ExternalProviderInitializerService"/>
 
-    <bean class="org.jahia.modules.tmdbprovider.TMDBTokenAction">
-        <property name="name" value="tmdbtoken"/>
-        <property name="datasource" ref="TMDBDataSource"/>
-    </bean>
-
     <bean id="TMDBProvider" class="org.jahia.modules.external.ExternalContentStoreProvider" parent="AbstractJCRStoreProvider" >
         <property name="key" value="TMDBProvider"/>
         <property name="mountPoint" value="/sites/digitall/contents/tmdb"/>

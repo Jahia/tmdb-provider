@@ -38,7 +38,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     public static final HashSet<String> LAZY_PROPERTIES = Sets.newHashSet("original_title", "homepage", "status", "runtime", "imdb_id", "budget", "revenue");
     public static final HashSet<String> LAZY_I18N_PROPERTIES = Sets.newHashSet("jcr:title", "overview", "tagline", "poster_path");
 
-    public static final HashSet<String> ROOT_NODES = Sets.newHashSet("movies", "lists", "persons");
+    public static final HashSet<String> ROOT_NODES = Sets.newHashSet("movies", "persons");
 
     private static String API_URL = "api.themoviedb.org";
     private static String API_CONFIGURATION = "/3/configuration";
@@ -87,7 +87,11 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     }
 
     public void setApiKeyValue(String apiKeyValue) {
-        this.apiKeyValue = apiKeyValue;
+        if (apiKeyValue.startsWith("'")) {
+            this.apiKeyValue = apiKeyValue.replaceAll("'", "");
+        } else {
+            this.apiKeyValue = apiKeyValue;
+        }
     }
 
     public void start() {
@@ -613,17 +617,18 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
             for (int i = 0; i < params.length; i += 2) {
                 m.put(params[i], params[i + 1]);
             }
-            m.put(API_KEY, apiKeyValue);
-
             url.setQuery(m.keySet().toArray(new String[m.size()]), m.values().toArray(new String[m.size()]));
             long l = System.currentTimeMillis();
             GetMethod httpMethod = new GetMethod(url.toString());
+            httpMethod.setRequestHeader("Authorization",
+                                        "Bearer " + apiKeyValue);
+            httpMethod.setRequestHeader("Content-Type", "application/json;charset=utf-8");
             try {
                 httpClient.executeMethod(httpMethod);
                 return new JSONObject(httpMethod.getResponseBodyAsString());
             } finally {
                 httpMethod.releaseConnection();
-                logger.debug("Request {} executed in {} ms",url, (System.currentTimeMillis() - l));
+                logger.info("Request {} executed in {} ms", url, (System.currentTimeMillis() - l));
             }
         } catch (Exception e) {
             logger.error("Error while querying TMDB", e);
@@ -639,7 +644,6 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     @Override
     public String[] getI18nPropertyValues(String path, String lang, String propertyName) throws PathNotFoundException {
-        String result;
         try {
             JSONObject movie;
             if (path.startsWith("/movies")) {
@@ -656,8 +660,10 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                     JSONObject configuration = getConfiguration();
                     String baseUrl = configuration.getJSONObject("images").getString("base_url");
                     return new String[]{baseUrl + configuration.getJSONObject("images").getJSONArray("poster_sizes").get(1) + movie.getString(propertyName)};
-                } else if (movie.has(propertyName)) {
+                } else if (movie.has(propertyName) && !movie.getString(propertyName).equals("null")) {
                     return new String[]{movie.getString(propertyName)};
+                } else if(propertyName.equals("runtime")) {
+                    return new String[]{"0"};
                 }
                 return new String[]{""};
             }
@@ -701,7 +707,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                     }
                 } else {
                     long pageNumber = query.getOffset() / 20;
-                    if (pageNumber < 50) {
+                    if (pageNumber < 100) {
                         //Return up to the first 2000 most popular movies
                         JSONObject discoverMovies = queryTMDB(API_DISCOVER_MOVIE, "sort_by", "popularity.desc", "page", String.valueOf(pageNumber + 1));
                         if (discoverMovies.has("total_pages") && discoverMovies.has("results")) {
@@ -718,7 +724,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                                 }
                             }
                         }
-                        logger.info("Found {} results from TMDB",results.size());
+                        logger.info("Found {} results from TMDB", results.size());
                     }
                 }
             }
