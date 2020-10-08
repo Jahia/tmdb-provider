@@ -237,18 +237,24 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     public ExternalData getItemByIdentifier(String identifier) throws ItemNotFoundException {
         try {
             if (identifier.equals("root")) {
-                return new ExternalData(identifier, "/", "jnt:contentFolder", new HashMap<String, String[]>());
+                Map<String, String[]> properties = new HashMap<String, String[]>();
+                properties.put("jcr:title",new String[]{"TMDB"});
+                return new ExternalData(identifier, "/", "jnt:contentFolder", properties);
             }
             if (identifier.contains("-rootfolder")) {
                 final String s = StringUtils.substringBefore(identifier, "-rootfolder");
                 if (ROOT_NODES.contains(s)) {
-                    return new ExternalData(identifier, "/" + s, "jnt:contentFolder", new HashMap<String, String[]>());
+                    Map<String, String[]> properties = new HashMap<String, String[]>();
+                    properties.put("jcr:title",new String[]{StringUtils.capitalize(s)});
+                    return new ExternalData(identifier, "/" + s, "jnt:contentFolder", properties);
                 }
             } else if (identifier.contains("-folder-")) {
                 final String s = StringUtils.substringBefore(identifier, "-folder-");
                 final String date = StringUtils.substringAfter(identifier, "-folder-");
                 if (ROOT_NODES.contains(s) && (YEAR_PATTERN.matcher(date).matches() || DATE_PATTERN.matcher(date).matches())) {
-                    return new ExternalData(identifier, "/" + s + "/" + date, "jnt:contentFolder", new HashMap<String, String[]>());
+                    Map<String, String[]> properties = new HashMap<String, String[]>();
+                    properties.put("jcr:title",new String[]{date});
+                    return new ExternalData(identifier, "/" + s + "/" + date, "jnt:contentFolder", properties);
                 }
             } else if (identifier.startsWith("movie-")) {
                 String movieId = StringUtils.substringAfter(identifier, "movie-");
