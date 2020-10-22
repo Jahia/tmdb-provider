@@ -5,16 +5,16 @@
  - overview (string) i18n
  - tagline (string) i18n
  - original_title (string)
- - backdrop_path (string) fulltextsearchable=no
- - poster_path (string) i18n fulltextsearchable=no
- - homepage (string) fulltextsearchable=no
+ - backdrop_path (string) nofulltext
+ - poster_path (string) i18n nofulltext
+ - homepage (string) nofulltext
  - release_date (date)
- - status (string) fulltextsearchable=no
+ - status (string) nofulltext
  - runtime (long)
- - spoken_languages (string) multiple fulltextsearchable=no
+ - spoken_languages (string) multiple nofulltext
  - adult (boolean)
- - production_companies (string) multiple fulltextsearchable=no
- - imdb_id (string) fulltextsearchable=no
+ - production_companies (string) multiple nofulltext
+ - imdb_id (string) nofulltext
  - budget (long)
  - revenue (double)
  - vote_average (double)
@@ -35,8 +35,8 @@
  - person (weakreference)
  - name (string)
  - job (string)
- - department (string) fulltextsearchable=no
- - profile (string) fulltextsearchable=no
+ - department (string) nofulltext
+ - profile (string) nofulltext
 
 [jnt:moviesList] > jnt:content, jmix:list, jmix:structuredContent, mix:title
  - poster_path (string)
@@ -45,7 +45,7 @@
 [jnt:moviePerson] > jnt:content, jmix:structuredContent
  - name (string)
  - biography (string)
- - homepage (string) fulltextsearchable=no
+ - homepage (string) nofulltext
  - birthday (date)
  - deathday (date)
- - profile (string) fulltextsearchable=no
+ - profile (string) nofulltext
