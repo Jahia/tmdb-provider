@@ -27,6 +27,8 @@ import org.jahia.services.cache.ehcache.EhCacheProvider;
 import org.jahia.services.content.JCRSessionFactory;
 import org.jahia.services.content.JCRStoreProvider;
 import org.jahia.services.content.nodetypes.NodeTypeRegistry;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joda.time.DateTime;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -41,11 +43,51 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.LazyProperty, ExternalDataSource.Searchable {
-    private static final Logger logger = LoggerFactory.getLogger(TMDBDataSource.class);
-    public static final HashSet<String> LAZY_PROPERTIES = Sets.newHashSet("original_title", "homepage", "status", "runtime", "imdb_id", "budget", "revenue");
-    public static final HashSet<String> LAZY_I18N_PROPERTIES = Sets.newHashSet("jcr:title", "overview", "tagline", "poster_path");
+    public static final String HOMEPAGE = "homepage";
+    public static final String POSTER_PATH = "poster_path";
+    public static final String MOVIES = "movies";
+    public static final String PERSONS = "persons";
+    public static final String BACKDROP_PATH = "backdrop_path";
+    public static final String RELEASE_DATE = "release_date";
+    public static final String ADULT = "adult";
+    public static final String VOTE_AVERAGE = "vote_average";
+    public static final String VOTE_COUNT = "vote_count";
+    public static final String POPULARITY = "popularity";
+    public static final String INDEXEDFULLMOVIECACHEKEYPREFIX = "indexedfullmovie-";
+    public static final String JNT_MOVIE = "jnt:movie";
+    public static final String CONFIGURATION = "configuration";
+    public static final String MOVIE_CREDITS_QUERYCACHEKEYPREFIX = "movie_credits_query_";
+    public static final String TMDB_CACHE = "tmdb-cache";
+    public static final String BIRTHDAY = "birthday";
+    public static final String DEATHDAY = "deathday";
+    public static final String BIOGRAPHY = "biography";
+    public static final String MOVIES_FOLDERCACHEKEY_PREFIX = "movies-folder-";
+    public static final String RESULTS = "results";
+    public static final String MOVIES_CREDITS = "movies-credits-";
+    public static final String CAST = "cast_";
+    public static final String CAST_ID = "cast_id";
+    public static final String CREW = "crew_";
+    public static final String CONTENT_FOLDER = "jnt:contentFolder";
+    public static final String FOLDER = "-folder-";
+    public static final String MOVIE_PREFIX = "movie-";
+    public static final String MOVIECREDITS = "moviecredits-";
+    public static final String IMAGES = "images";
+    public static final String BASE_URL = "base_url";
+    public static final String PROFILE_PATH = "profile_path";
+    public static final String TIMESTAMP = "T00:00:00.000+00:00";
+    public static final String CHARACTER = "character";
+    public static final String JNT_CAST = "jnt:cast";
+    public static final String ORDER = "order";
+    public static final String DEPARTMENT = "department";
+    public static final String JNT_CREW = "jnt:crew";
+    public static final String PERSON_PREFIX = "person-";
+    public static final String FULLMOVIE_PREFIX = "fullmovie-";
+    public static final String KEYWORDS = "keywords";
 
-    public static final HashSet<String> ROOT_NODES = Sets.newHashSet("movies", "persons");
+    private static final Set<String> LAZY_PROPERTIES = Sets.newHashSet("original_title", HOMEPAGE, "status", "runtime", "imdb_id", "budget", "revenue");
+    private static final Set<String> LAZY_I18N_PROPERTIES = Sets.newHashSet(Constants.JCR_TITLE, "overview", "tagline", POSTER_PATH);
+    private static final Set<String> ROOT_NODES = Sets.newHashSet(MOVIES, PERSONS);
+    private static final Logger logger = LoggerFactory.getLogger(TMDBDataSource.class);
     public static final int SOCKET_TIMEOUT = 60000;
     public static final int CONNECT_TIMEOUT = 15000;
     public static final int MAX_CONNECTIONS = 10;
@@ -55,6 +97,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     private static String API_CONFIGURATION = "/3/configuration";
     private static String API_MOVIE = "/3/movie/";
     private static String API_TV = "/3/tv/";
+    private static final String API_PERSON = "/3/person/";
     private static String API_DISCOVER_MOVIE = "/3/discover/movie";
     private static String API_DISCOVER_TV = "/3/discover/tv";
     private static String API_SEARCH_MOVIE = "/3/search/movie";
@@ -66,10 +109,6 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     private EhCacheProvider ehCacheProvider;
     private Ehcache cache;
     private String apiKeyValue;
-
-    private String accountId;
-    private String token;
-    private String sessionId;
 
     private HttpClient httpClient;
 
@@ -105,7 +144,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     public void setApiKeyValue(String apiKeyValue) {
         if (apiKeyValue.startsWith("'")) {
-            this.apiKeyValue = apiKeyValue.replaceAll("'", "");
+            this.apiKeyValue = apiKeyValue.replace("'", "");
         } else {
             this.apiKeyValue = apiKeyValue;
         }
@@ -113,10 +152,10 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     public void start() {
         try {
-            if (!ehCacheProvider.getCacheManager().cacheExists("tmdb-cache")) {
-                ehCacheProvider.getCacheManager().addCache("tmdb-cache");
+            if (!ehCacheProvider.getCacheManager().cacheExists(TMDB_CACHE)) {
+                ehCacheProvider.getCacheManager().addCache(TMDB_CACHE);
             }
-            cache = ehCacheProvider.getCacheManager().getCache("tmdb-cache");
+            cache = ehCacheProvider.getCacheManager().getCache(TMDB_CACHE);
         } catch (IllegalStateException | CacheException e) {
             logger.error("Error while initializing cache for IMDB", e);
         }
@@ -132,115 +171,104 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         int yearLimit = currentDate.getYear();
         int monthLimit = currentDate.getMonthOfYear() - 1;
 
-        List<String> r = new ArrayList<String>();
+        List<String> r = new ArrayList<>();
 
         String[] splitPath = path.split("/");
         try {
             if (splitPath.length == 0) {
                 r.addAll(ROOT_NODES);
-                return r;
-            } else if (splitPath[1].equals("movies")) {
-                switch (splitPath.length) {
-                    case 2:
-                        for (int i = 1900; i <= yearLimit; i++) {
-                            r.add(Integer.toString(i));
-                        }
-                        return r;
-                    case 3:
-                        if (splitPath[2].equals(Integer.toString(yearLimit))) {
-                            for (int i = 1; i <= monthLimit; i++) {
-                                r.add(StringUtils.leftPad(Integer.toString(i), 2, "0"));
-                            }
-                        } else {
-                            for (int i = 1; i <= 12; i++) {
-                                r.add(StringUtils.leftPad(Integer.toString(i), 2, "0"));
-                            }
-                        }
-                        return r;
-                    case 4:
-                        final String date = splitPath[2] + "-" + splitPath[3];
-                        if (cache.get("movies-folder-" + date) != null) {
-                            r = (List<String>) cache.get("movies-folder-" + date).getObjectValue();
-                        } else {
-                            JSONObject o = queryTMDB(API_DISCOVER_MOVIE, "release_date.gte", date + "-01", "release_date.lte", splitPath[2] + "-" + splitPath[3] + "-31");
-                            JSONArray result = o.getJSONArray("results");
-                            for (int i = 0; i < result.length(); i++) {
-                                JSONObject movie = result.getJSONObject(i);
-                                r.add(movie.getString("id"));
-                                cache.put(new Element("movie-" + movie.getString("id"), movie.toString()));
-                            }
-                            cache.put(new Element("movies-folder-" + date, r));
-                        }
-                        return r;
-                    case 5:
-                        JSONObject o;
-                        if (cache.get("movies-credits-" + splitPath[4]) != null) {
-                            o = new JSONObject((String) cache.get("movies-credits-" + splitPath[4]).getObjectValue());
-                        } else {
-                            o = queryTMDB("/3/movie/" + splitPath[4] + "/credits");
-                            cache.put(new Element("movies-credits-" + splitPath[4], o.toString()));
-                        }
-                        if (o.has("cast")) {
-                            JSONArray result = o.getJSONArray("cast");
-                            for (int i = 0; i < result.length(); i++) {
-                                JSONObject cast = result.getJSONObject(i);
-                                r.add("cast_" + cast.getString("cast_id") + "_" + cast.getString("id"));
-                            }
-                        }
-                        if (o.has("crew")) {
-                            JSONArray result = o.getJSONArray("crew");
-                            for (int i = 0; i < result.length(); i++) {
-                                JSONObject crew = result.getJSONObject(i);
-                                if (!r.contains("crew_" + crew.getString("id"))) {
-                                    r.add("crew_" + crew.getString("job") + "_" + crew.getString("id"));
-                                }
-                            }
-                        }
-                        return r;
-                }
-            } else if (splitPath[1].equals("lists")) {
-                switch (splitPath.length) {
-                    case 2:
-                        if (cache.get("lists") != null) {
-                            r = (List<String>) cache.get("lists").getObjectValue();
-                        } else {
-                            JSONObject o = queryTMDB("/3/account/" + getAccountId() + "/lists", "session_id", getSessionId());
-                            JSONArray result = o.getJSONArray("results");
-                            for (int i = 0; i < result.length(); i++) {
-                                JSONObject list = result.getJSONObject(i);
-                                r.add(list.getString("id"));
-                                cache.put(new Element("list-" + list.getString("id"), list.toString()));
-                            }
-                            cache.put(new Element("lists", r));
-                        }
-                        return r;
-                    case 3:
-                        JSONObject list;
-                        if (cache.get("fulllist-" + splitPath[2]) != null) {
-                            list = new JSONObject((String) cache.get("fulllist-" + splitPath[2]).getObjectValue());
-                        } else {
-                            list = queryTMDB("/3/list/" + splitPath[2]);
-                            cache.put(new Element("fulllist-" + splitPath[2], list.toString()));
-                        }
-                        JSONArray result = list.getJSONArray("items");
-                        for (int i = 0; i < Math.min(result.length(), 20); i++) {
-                            JSONObject movie = result.getJSONObject(i);
-                            r.add(movie.getString("id"));
-                            cache.put(new Element("movieref-" + movie.getString("id"), movie.toString()));
-                        }
-                        return r;
-                }
-            } else if (splitPath[1].equals("persons")) {
-                switch (splitPath.length) {
-                    case 2:
-                        return r;
-                }
+            } else if (splitPath[1].equals(MOVIES)) {
+                getMovieSplit(splitPath, r, yearLimit, monthLimit);
             }
         } catch (JSONException e) {
-            e.printStackTrace();
+            logger.error("Error while parsing json {}", e.getMessage(), e);
         }
 
-        return Collections.emptyList();
+        return r;
+    }
+
+    private void getMovieSplit(String[] splitPath, List<String> r, int yearLimit, int monthLimit) throws RepositoryException, JSONException {
+        switch (splitPath.length) {
+            case 2:
+                getYearsAsStrings(r, yearLimit);
+                return;
+            case 3:
+                if (splitPath[2].equals(Integer.toString(yearLimit))) {
+                    getMonths(r, monthLimit);
+                } else {
+                    getMonths(r, 12);
+                }
+                break;
+            case 4:
+                getMoviesForDate(r, splitPath[2], splitPath[3]);
+                break;
+            case 5:
+                String movieID = splitPath[4];
+                getMovieCredits(movieID, r);
+                break;
+            default:
+        }
+    }
+
+    private void getMovieCredits(String movieID, List<String> r) throws JSONException, RepositoryException {
+        String movieCreditsKey = MOVIES_CREDITS + movieID;
+        JSONObject o;
+        if (cache.get(movieCreditsKey) != null) {
+            o = new JSONObject((String) cache.get(movieCreditsKey).getObjectValue());
+        } else {
+            o = queryTMDB(API_MOVIE + movieID + "/credits");
+            cache.put(new Element(movieCreditsKey, o.toString()));
+        }
+        if (o.has("cast")) {
+            JSONArray result = o.getJSONArray("cast");
+            for (int i = 0; i < result.length(); i++) {
+                JSONObject cast = result.getJSONObject(i);
+                r.add(CAST + cast.getString(CAST_ID) + "_" + cast.getString("id"));
+            }
+        }
+        if (o.has("crew")) {
+            JSONArray result = o.getJSONArray("crew");
+            for (int i = 0; i < result.length(); i++) {
+                JSONObject crew = result.getJSONObject(i);
+                if (!r.contains(CREW + crew.getString("id"))) {
+                    r.add(CREW + crew.getString("job") + "_" + crew.getString("id"));
+                }
+            }
+        }
+    }
+
+    private void getMoviesForDate(List<String> r, String year, String month) throws RepositoryException, JSONException {
+        String date = year + "-" + month;
+        if (cache.get(MOVIES_FOLDERCACHEKEY_PREFIX + date) != null) {
+            r.addAll((List<String>) cache.get(MOVIES_FOLDERCACHEKEY_PREFIX + date).getObjectValue());
+        } else {
+            Calendar instance = Calendar.getInstance();
+            instance.set(Calendar.YEAR, Integer.valueOf(year));
+            instance.set(Calendar.MONTH, Integer.valueOf(month));
+            instance.set(Calendar.DAY_OF_MONTH, 1);
+            instance.roll(Calendar.DAY_OF_MONTH,false);
+            JSONObject o = queryTMDB(API_DISCOVER_MOVIE, "primary_release_date.gte", date + "-01", "primary_release_date.lte",
+                                     date + "-"+instance.get(Calendar.DAY_OF_MONTH));
+            JSONArray result = o.getJSONArray(RESULTS);
+            for (int i = 0; i < result.length(); i++) {
+                JSONObject movie = result.getJSONObject(i);
+                r.add(movie.getString("id"));
+                cache.put(new Element(MOVIE_PREFIX + movie.getString("id"), movie.toString()));
+            }
+            cache.put(new Element(MOVIES_FOLDERCACHEKEY_PREFIX + date, r));
+        }
+    }
+
+    private void getMonths(List<String> r, int monthLimit) {
+        for (int i = 1; i <= monthLimit; i++) {
+            r.add(StringUtils.leftPad(Integer.toString(i), 2, "0"));
+        }
+    }
+
+    private void getYearsAsStrings(List<String> r, int yearLimit) {
+        for (int i = yearLimit; i >= 1900; i--) {
+            r.add(Integer.toString(i));
+        }
     }
 
     /**
@@ -254,180 +282,32 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     public ExternalData getItemByIdentifier(String identifier) throws ItemNotFoundException {
         try {
             if (identifier.equals("root")) {
-                return new ExternalData(identifier, "/", "jnt:contentFolder", new HashMap<String, String[]>());
+                return getRootData(identifier, "TMDB", "/");
             }
             if (identifier.contains("-rootfolder")) {
-                final String s = StringUtils.substringBefore(identifier, "-rootfolder");
-                if (ROOT_NODES.contains(s)) {
-                    return new ExternalData(identifier, "/" + s, "jnt:contentFolder", new HashMap<String, String[]>());
-                }
-            } else if (identifier.contains("-folder-")) {
-                final String s = StringUtils.substringBefore(identifier, "-folder-");
-                final String date = StringUtils.substringAfter(identifier, "-folder-");
-                if (ROOT_NODES.contains(s) && (YEAR_PATTERN.matcher(date).matches() || DATE_PATTERN.matcher(date).matches())) {
-                    return new ExternalData(identifier, "/" + s + "/" + date, "jnt:contentFolder", new HashMap<String, String[]>());
-                }
-            } else if (identifier.startsWith("movie-")) {
-                String movieId = StringUtils.substringAfter(identifier, "movie-");
-                try {
-                    Integer.parseInt(movieId);
-                } catch (NumberFormatException e) {
-                    throw new ItemNotFoundException(identifier);
-                }
+                ExternalData identifier1 = getRootFolderData(identifier);
+                if (identifier1 != null) return identifier1;
+            } else if (identifier.contains(FOLDER)) {
+                ExternalData identifier1 = getDateFolderData(identifier);
+                if (identifier1 != null) return identifier1;
+            } else if (identifier.startsWith(MOVIE_PREFIX)) {
+                String movieId = getIdentifier(identifier, MOVIE_PREFIX);
                 return getMovieData(identifier, movieId);
-            } else if (identifier.startsWith("moviecredits-")) {
-                String movieId = StringUtils.substringAfter(identifier, "moviecredits-");
+            } else if (identifier.startsWith(MOVIECREDITS)) {
+                String movieId = StringUtils.substringAfter(identifier, MOVIECREDITS);
                 String creditsId = StringUtils.substringAfter(movieId, "-");
                 movieId = StringUtils.substringBefore(movieId, "-");
 
-                ExternalData movie = getItemByIdentifier("movie-" + movieId);
-
-                JSONObject o;
-                if (cache.get("movies-credits-" + movieId) != null) {
-                    o = new JSONObject((String) cache.get("movies-credits-" + movieId).getObjectValue());
-                } else {
-                    o = queryTMDB("/3/movie/" + movieId + "/credits");
-                    cache.put(new Element("movies-credits-" + movieId, o.toString()));
-                }
-
-                Map<String, String[]> properties = new HashMap<String, String[]>();
-
-                JSONObject configuration = getConfiguration();
-                String baseUrl = configuration.getJSONObject("images").getString("base_url");
-
-                JSONObject credit = null;
-                ExternalData data = null;
-                if (creditsId.startsWith("crew_")) {
-                    String id = StringUtils.substringAfter(creditsId, "crew_");
-                    String job = StringUtils.substringBefore(id, "_");
-                    id = StringUtils.substringAfter(id, "_");
-                    JSONArray a = o.getJSONArray("crew");
-                    for (int i = 0; i < a.length(); i++) {
-                        JSONObject crew = a.getJSONObject(i);
-                        if (crew.getString("id").equals(id) && crew.getString("job").equals(job)) {
-                            data = new ExternalData(identifier, movie.getPath() + "/" + creditsId, "jnt:crew", properties);
-                            credit = crew;
-                            if (credit.getString("department") != null)
-                                properties.put("department", new String[]{credit.getString("department")});
-                            if (credit.getString("job") != null)
-                                properties.put("job", new String[]{credit.getString("job")});
-                            if (credit.getString("id") != null)
-                                properties.put("person", new String[]{"person-" + credit.getString("id")});
-                            break;
-                        }
-                    }
-                } else if (creditsId.startsWith("cast_")) {
-                    String id = StringUtils.substringAfter(creditsId, "cast_");
-                    String castId = StringUtils.substringBefore(id, "_");
-                    id = StringUtils.substringAfter(id, "_");
-                    JSONArray a = o.getJSONArray("cast");
-                    for (int i = 0; i < a.length(); i++) {
-                        JSONObject cast = a.getJSONObject(i);
-                        if (cast.getString("id").equals(id) && cast.getString("cast_id").equals(castId)) {
-                            data = new ExternalData(identifier, movie.getPath() + "/" + creditsId, "jnt:cast", properties);
-                            credit = cast;
-                            if (credit.getString("character") != null)
-                                properties.put("character", new String[]{credit.getString("character")});
-                            if (credit.getString("order") != null)
-                                properties.put("order", new String[]{credit.getString("order")});
-                            if (credit.getString("cast_id") != null)
-                                properties.put("cast_id", new String[]{credit.getString("cast_id")});
-                            if (credit.getString("id") != null)
-                                properties.put("person", new String[]{"person-" + credit.getString("id")});
-                            break;
-                        }
-                    }
-                }
-                if (credit != null) {
-                    if (credit.getString("name") != null)
-                        properties.put("name", new String[]{credit.getString("name")});
-                    if (!StringUtils.isEmpty(credit.getString("profile_path")) && !credit.getString("profile_path").equals("null"))
-                        properties.put("profile", new String[]{baseUrl + configuration.getJSONObject("images").getJSONArray("profile_sizes").get(1) + credit.getString("profile_path")});
-
-
-                    return data;
-                }
-            } else if (identifier.startsWith("lists-")) {
-                String listId = StringUtils.substringAfter(identifier, "lists-");
-                if (!Pattern.compile("[a-z0-9]+").matcher(listId).matches()) {
-                    throw new ItemNotFoundException(identifier);
-                }
-
-                JSONObject list;
-
-                if (cache.get("list-" + listId) != null) {
-                    list = new JSONObject((String) cache.get("list-" + listId).getObjectValue());
-                } else if (cache.get("fulllist-" + listId) != null) {
-                    list = new JSONObject((String) cache.get("fulllist-" + listId).getObjectValue());
-                } else {
-                    list = queryTMDB("/3/list/" + listId);
-                    cache.put(new Element("fulllist-" + listId, list.toString()));
-                }
-
-                JSONObject configuration = getConfiguration();
-                String baseUrl = configuration.getJSONObject("images").getString("base_url");
-
-                Map<String, String[]> properties = new HashMap<String, String[]>();
-                if (list.getString("name") != null)
-                    properties.put("jcr:title", new String[]{list.getString("name")});
-                if (list.getString("description") != null)
-                    properties.put("jcr:description", new String[]{list.getString("description")});
-                if (!StringUtils.isEmpty(list.getString("poster_path")) && !list.getString("poster_path").equals("null"))
-                    properties.put("poster_path", new String[]{baseUrl + configuration.getJSONObject("images").getJSONArray("poster_sizes").get(1) + list.getString("poster_path")});
-
-                ExternalData data = new ExternalData(identifier, "/lists/" + listId, "jnt:moviesList", properties);
-                return data;
+                ExternalData data = getMovieCreditsData(identifier, movieId, creditsId);
+                if (data != null) return data;
             } else if (identifier.startsWith("movieref-")) {
                 String movieId = StringUtils.substringAfter(identifier, "movieref-");
                 String listId = StringUtils.substringBefore(movieId, "-");
                 movieId = StringUtils.substringAfter(movieId, "-");
-                try {
-                    Integer.parseInt(movieId);
-                } catch (NumberFormatException e) {
-                    throw new ItemNotFoundException(identifier);
-                }
-                if (!Pattern.compile("[a-z0-9]+").matcher(listId).matches()) {
-                    throw new ItemNotFoundException(identifier);
-                }
-
-                Map<String, String[]> properties = new HashMap<String, String[]>();
-                properties.put("j:node", new String[]{"movie-" + movieId});
-                ExternalData data = new ExternalData(identifier, "/lists/" + listId + "/" + movieId, "jnt:contentReference", properties);
-                return data;
-            } else if (identifier.startsWith("person-")) {
-                String personId = StringUtils.substringAfter(identifier, "person-");
-                try {
-                    Integer.parseInt(personId);
-                } catch (NumberFormatException e) {
-                    throw new ItemNotFoundException(identifier);
-                }
-                JSONObject person;
-                if (cache.get("person-" + personId) != null) {
-                    person = new JSONObject((String) cache.get("person-" + personId).getObjectValue());
-                } else {
-                    person = queryTMDB("/3/person/" + personId);
-                    cache.put(new Element("person-" + personId, person.toString()));
-                }
-
-                JSONObject configuration = getConfiguration();
-                String baseUrl = configuration.getJSONObject("images").getString("base_url");
-
-                Map<String, String[]> properties = new HashMap<String, String[]>();
-                if (person.getString("name") != null)
-                    properties.put("name", new String[]{person.getString("name")});
-                if (person.getString("biography") != null)
-                    properties.put("biography", new String[]{person.getString("biography")});
-                if (!StringUtils.isEmpty(person.getString("homepage")) && !person.getString("homepage").equals("null"))
-                    properties.put("homepage", new String[]{person.getString("homepage")});
-                if (!StringUtils.isEmpty(person.getString("profile_path")) && !person.getString("profile_path").equals("null"))
-                    properties.put("profile", new String[]{baseUrl + configuration.getJSONObject("images").getJSONArray("profile_sizes").get(2) + person.getString("profile_path")});
-                if (!StringUtils.isEmpty(person.getString("birthday")) && !person.getString("birthday").equals("null"))
-                    properties.put("birthday", new String[]{person.getString("birthday") + "T00:00:00.000+00:00"});
-                if (!StringUtils.isEmpty(person.getString("deathday")) && !person.getString("deathday").equals("null"))
-                    properties.put("deathday", new String[]{person.getString("deathday") + "T00:00:00.000+00:00"});
-
-                ExternalData data = new ExternalData(identifier, "/persons/" + personId, "jnt:moviePerson", properties);
-                return data;
+                return getMovieRefData(identifier, movieId, listId);
+            } else if (identifier.startsWith(PERSON_PREFIX)) {
+                String personId = getIdentifier(identifier, PERSON_PREFIX);
+                return getPersonData(identifier, personId);
             }
         } catch (Exception e) {
             throw new ItemNotFoundException(e);
@@ -436,20 +316,189 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         throw new ItemNotFoundException(identifier);
     }
 
+    @NotNull
+    private ExternalData getMovieRefData(String identifier, String movieId, String listId) throws ItemNotFoundException {
+        try {
+            Integer.parseInt(movieId);
+        } catch (NumberFormatException e) {
+            throw new ItemNotFoundException(identifier);
+        }
+        if (!Pattern.compile("[a-z0-9]+").matcher(listId).matches()) {
+            throw new ItemNotFoundException(identifier);
+        }
+
+        Map<String, String[]> properties = new HashMap<>();
+        properties.put("j:node", new String[]{MOVIE_PREFIX + movieId});
+        return new ExternalData(identifier, "/lists/" + listId + "/" + movieId, "jnt:contentReference", properties);
+    }
+
+    @NotNull
+    private ExternalData getPersonData(String identifier, String personId) throws JSONException, RepositoryException {
+        JSONObject person;
+        if (cache.get(PERSON_PREFIX + personId) != null) {
+            person = new JSONObject((String) cache.get(PERSON_PREFIX + personId).getObjectValue());
+        } else {
+            person = queryTMDB(API_PERSON + personId);
+            cache.put(new Element(PERSON_PREFIX + personId, person.toString()));
+        }
+
+        JSONObject configuration = getConfiguration();
+        String baseUrl = configuration.getJSONObject(IMAGES).getString(BASE_URL);
+
+        Map<String, String[]> properties = new HashMap<>();
+        if (person.getString("name") != null)
+            properties.put("name", new String[]{person.getString("name")});
+        if (person.getString(BIOGRAPHY) != null)
+            properties.put(BIOGRAPHY, new String[]{person.getString(BIOGRAPHY)});
+        if (!StringUtils.isEmpty(person.getString(HOMEPAGE)) && !person.getString(HOMEPAGE).equals("null"))
+            properties.put(HOMEPAGE, new String[]{person.getString(HOMEPAGE)});
+        if (!StringUtils.isEmpty(person.getString(PROFILE_PATH)) && !person.getString(PROFILE_PATH).equals("null"))
+            properties.put("profile", new String[]{baseUrl + configuration.getJSONObject(IMAGES).getJSONArray("profile_sizes").get(2) + person.getString(PROFILE_PATH)});
+        if (!StringUtils.isEmpty(person.getString(BIRTHDAY)) && !person.getString(BIRTHDAY).equals("null"))
+            properties.put(BIRTHDAY, new String[]{person.getString(BIRTHDAY) + TIMESTAMP});
+        if (!StringUtils.isEmpty(person.getString(DEATHDAY)) && !person.getString(DEATHDAY).equals("null"))
+            properties.put(DEATHDAY, new String[]{person.getString(DEATHDAY) + TIMESTAMP});
+
+        return new ExternalData(identifier, "/persons/" + personId, "jnt:moviePerson", properties);
+    }
+
+    @Nullable
+    private ExternalData getMovieCreditsData(String identifier, String movieId, String creditsId) throws JSONException, RepositoryException {
+        ExternalData movie = getItemByIdentifier(MOVIE_PREFIX + movieId);
+
+        JSONObject o;
+        if (cache.get(MOVIES_CREDITS + movieId) != null) {
+            o = new JSONObject((String) cache.get(MOVIES_CREDITS + movieId).getObjectValue());
+        } else {
+            o = queryTMDB(API_MOVIE + movieId + "/credits");
+            cache.put(new Element(MOVIES_CREDITS + movieId, o.toString()));
+        }
+
+        if (creditsId.startsWith(CREW)) {
+            return getCrewData(identifier, creditsId, movie, o);
+        } else if (creditsId.startsWith(CAST)) {
+            return getCastData(identifier, creditsId, movie, o);
+        }
+        return null;
+    }
+
+    private void addNameAndProfile(JSONObject credit, Map<String, String[]> properties) throws JSONException, RepositoryException {
+        JSONObject configuration = getConfiguration();
+        String baseUrl = configuration.getJSONObject(IMAGES).getString(BASE_URL);
+        if (credit.getString("name") != null)
+            properties.put("name", new String[]{credit.getString("name")});
+        if (!StringUtils.isEmpty(credit.getString(PROFILE_PATH)) && !credit.getString(PROFILE_PATH).equals("null"))
+            properties.put("profile", new String[]{baseUrl + configuration.getJSONObject(IMAGES).getJSONArray("profile_sizes").get(1) + credit.getString(PROFILE_PATH)});
+    }
+
+    private ExternalData getCastData(String identifier, String creditsId, ExternalData movie, JSONObject o) throws JSONException, RepositoryException {
+        String id = StringUtils.substringAfter(creditsId, CAST);
+        String castId = StringUtils.substringBefore(id, "_");
+        id = StringUtils.substringAfter(id, "_");
+        JSONArray a = o.getJSONArray("cast");
+        for (int i = 0; i < a.length(); i++) {
+            JSONObject cast = a.getJSONObject(i);
+            if (cast.getString("id").equals(id) && cast.getString(CAST_ID).equals(castId)) {
+                Map<String, String[]> properties = new HashMap<>();
+                ExternalData data = new ExternalData(identifier, movie.getPath() + "/" + creditsId, JNT_CAST, properties);
+                parseCast(cast, properties);
+                return data;
+            }
+        }
+        return null;
+    }
+
+    private void parseCast(JSONObject cast, Map<String, String[]> properties) throws JSONException, RepositoryException {
+        if (cast.getString(CHARACTER) != null)
+            properties.put(CHARACTER, new String[]{cast.getString(CHARACTER)});
+        if (cast.getString(ORDER) != null)
+            properties.put(ORDER, new String[]{cast.getString(ORDER)});
+        if (cast.getString(CAST_ID) != null)
+            properties.put(CAST_ID, new String[]{cast.getString(CAST_ID)});
+        if (cast.getString("id") != null)
+            properties.put("person", new String[]{PERSON_PREFIX + cast.getString("id")});
+        addNameAndProfile(cast, properties);
+    }
+
+
+    private ExternalData getCrewData(String identifier, String creditsId, ExternalData movie, JSONObject o) throws JSONException, RepositoryException {
+        String id = StringUtils.substringAfter(creditsId, CREW);
+        String job = StringUtils.substringBefore(id, "_");
+        id = StringUtils.substringAfter(id, "_");
+        JSONArray a = o.getJSONArray("crew");
+        for (int i = 0; i < a.length(); i++) {
+            JSONObject crew = a.getJSONObject(i);
+            if (crew.getString("id").equals(id) && crew.getString("job").equals(job)) {
+                Map<String, String[]> properties = new HashMap<>();
+                ExternalData data = new ExternalData(identifier, movie.getPath() + "/" + creditsId, JNT_CREW, properties);
+                if (crew.getString(DEPARTMENT) != null)
+                    properties.put(DEPARTMENT, new String[]{crew.getString(DEPARTMENT)});
+                if (crew.getString("job") != null)
+                    properties.put("job", new String[]{crew.getString("job")});
+                if (crew.getString("id") != null)
+                    properties.put("person", new String[]{PERSON_PREFIX + crew.getString("id")});
+                addNameAndProfile(crew, properties);
+                return data;
+            }
+        }
+        return null;
+    }
+
+    @NotNull
+    private String getIdentifier(String identifier, String identifierPrefix) throws ItemNotFoundException {
+        String id = StringUtils.substringAfter(identifier, identifierPrefix);
+        try {
+            Integer.parseInt(id);
+        } catch (NumberFormatException e) {
+            throw new ItemNotFoundException(identifier);
+        }
+        return id;
+    }
+
+    @Nullable
+    private ExternalData getRootFolderData(String identifier) {
+        final String s = StringUtils.substringBefore(identifier, "-rootfolder");
+        if (ROOT_NODES.contains(s)) {
+            return getRootData(identifier, StringUtils.capitalize(s), "/" + s);
+        }
+        return null;
+    }
+
+    @Nullable
+    private ExternalData getDateFolderData(String identifier) {
+        final String s = StringUtils.substringBefore(identifier, FOLDER);
+        final String date = StringUtils.substringAfter(identifier, FOLDER);
+        if (ROOT_NODES.contains(s) && (YEAR_PATTERN.matcher(date).matches() || DATE_PATTERN.matcher(date).matches())) {
+            Map<String, String[]> properties = new HashMap<>();
+            properties.put(Constants.JCR_TITLE, new String[]{date});
+            return new ExternalData(identifier, "/" + s + "/" + date, CONTENT_FOLDER, properties);
+        }
+        return null;
+    }
+
+    @NotNull
+    private ExternalData getRootData(String identifier, String tmdb, String s2) {
+        Map<String, String[]> properties = new HashMap<>();
+        properties.put(Constants.JCR_TITLE, new String[]{tmdb});
+        return new ExternalData(identifier, s2, CONTENT_FOLDER, properties);
+    }
+
     private ExternalData getMovieData(String identifier, String movieId) throws JSONException, RepositoryException {
         JSONObject movie;
 
         String lang = "en";
-        if (cache.get("movie-" + movieId) != null) {
-            movie = new JSONObject((String) cache.get("movie-" + movieId).getObjectValue());
-        } else if (cache.get("fullmovie-" + lang + "-" + movieId) != null) {
-            movie = new JSONObject((String) cache.get("fullmovie-" + lang + "-" + movieId).getObjectValue());
+        if (cache.get(MOVIE_PREFIX + movieId) != null) {
+            movie = new JSONObject((String) cache.get(MOVIE_PREFIX + movieId).getObjectValue());
+        } else if (cache.get(FULLMOVIE_PREFIX + lang + "-" + movieId) != null) {
+            movie = new JSONObject((String) cache.get(FULLMOVIE_PREFIX + lang + "-" + movieId).getObjectValue());
         } else {
             try {
                 movie = queryTMDB(API_MOVIE + movieId, "language", lang);
                 JSONObject keywords = queryTMDB(API_MOVIE + movieId + "/keywords");
-                movie.put("keywords", keywords.getJSONArray("keywords"));
-                cache.put(new Element("fullmovie-" + lang + "-" + movieId, movie.toString()));
+                if (keywords.has(KEYWORDS)) {
+                    movie.put(KEYWORDS, keywords.getJSONArray(KEYWORDS));
+                }
+                cache.put(new Element(FULLMOVIE_PREFIX + lang + "-" + movieId, movie.toString()));
             } catch (RepositoryException | JSONException | IllegalArgumentException | IllegalStateException | CacheException e) {
                 logger.error("Error while getting movie", e);
                 movie = new JSONObject();
@@ -459,63 +508,31 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         Map<String, String[]> properties = null;
         try {
             JSONObject configuration = getConfiguration();
-            String baseUrl = configuration.getJSONObject("images").getString("base_url");
+            String baseUrl = configuration.getJSONObject(IMAGES).getString(BASE_URL);
 
-            properties = new HashMap<String, String[]>();
-            if (movie.has("backdrop_path") && !movie.getString("backdrop_path").equals("null"))
-                properties.put("backdrop_path", new String[]{baseUrl + configuration.getJSONObject("images").getJSONArray("backdrop_sizes").get(1) + movie.getString("backdrop_path")});
-            if (movie.has("release_date")) {
-                properties.put("release_date", new String[]{movie.getString("release_date") + "T00:00:00.000+00:00"});
-            }
-            if (movie.has("adult")) {
-                properties.put("adult", new String[]{movie.getString("adult")});
-            }
-            if (movie.has("vote_average")) {
-                properties.put("vote_average", new String[]{movie.getString("vote_average")});
-            }
-            if (movie.has("vote_count")) {
-                properties.put("vote_count", new String[]{movie.getString("vote_count")});
-            }
-            if (movie.has("popularity")) {
-                properties.put("popularity", new String[]{movie.getString("popularity")});
-            }
-            if (movie.has("genres")) {
-                JSONArray genres = movie.getJSONArray("genres");
-                String[] strings = new String[genres.length()];
-                for (int i = 0; i < genres.length(); i++) {
-                    JSONObject genre = genres.getJSONObject(i);
-                    strings[i] = genre.getString("name");
-                }
-                properties.put("j:tagList", strings);
-            }
+            properties = new HashMap<>();
+            parseMovid(movie, properties, configuration, baseUrl);
+            getArrayPropsAsMultiValue(movie, properties, "genres", "j:tagList");
             //Get keywords
-            if (movie.has("keywords")) {
-                JSONArray keywordsArray = movie.getJSONArray("keywords");
-                String[] strings = new String[keywordsArray.length()];
-                for (int i = 0; i < keywordsArray.length(); i++) {
-                    JSONObject keywordsArrayJSONObject = keywordsArray.getJSONObject(i);
-                    strings[i] = keywordsArrayJSONObject.getString("name");
-                }
-                properties.put("j:keywords", strings);
-            }
+            getArrayPropsAsMultiValue(movie, properties, KEYWORDS, "j:keywords");
         } catch (JSONException | RepositoryException e) {
             logger.error("Error while getting movie", e);
         }
-        ExternalData data = new ExternalData(identifier, getPathForMovie(movie), "jnt:movie", properties);
+        ExternalData data = new ExternalData(identifier, getPathForMovie(movie), JNT_MOVIE, properties);
 
-        data.setLazyProperties(new HashSet<String>(LAZY_PROPERTIES));
+        data.setLazyProperties(new HashSet<>(LAZY_PROPERTIES));
 
-        Map<String, Set<String>> lazy18 = new HashMap<String, Set<String>>();
-        lazy18.put("en", new HashSet<String>(LAZY_I18N_PROPERTIES));
-        lazy18.put("fr", new HashSet<String>(LAZY_I18N_PROPERTIES));
+        Map<String, Set<String>> lazy18 = new HashMap<>();
+        lazy18.put("en", new HashSet<>(LAZY_I18N_PROPERTIES));
+        lazy18.put("fr", new HashSet<>(LAZY_I18N_PROPERTIES));
         data.setLazyI18nProperties(lazy18);
-        if (cache.get("indexedfullmovie-" + movieId) == null) {
+        if (cache.get(INDEXEDFULLMOVIECACHEKEYPREFIX + movieId) == null) {
             EventService eventService = BundleUtils.getOsgiService(EventService.class, null);
             JCRStoreProvider jcrStoreProvider = JCRSessionFactory.getInstance().getProviders().get("TMDBProvider");
             CompletableFuture.supplyAsync(() -> {
                 try {
                     eventService.sendAddedNodes(Arrays.asList(data), jcrStoreProvider);
-                    cache.put(new Element("indexedfullmovie-" + movieId, "indexed"));
+                    cache.put(new Element(INDEXEDFULLMOVIECACHEKEYPREFIX + movieId, "indexed"));
                 } catch (RepositoryException e) {
                     e.printStackTrace();
                 }
@@ -525,11 +542,43 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         return data;
     }
 
+    private void getArrayPropsAsMultiValue(JSONObject movie, Map<String, String[]> properties, String genres2, String s) throws JSONException {
+        if (movie.has(genres2)) {
+            JSONArray genres = movie.getJSONArray(genres2);
+            String[] strings = new String[genres.length()];
+            for (int i = 0; i < genres.length(); i++) {
+                JSONObject genre = genres.getJSONObject(i);
+                strings[i] = genre.getString("name");
+            }
+            properties.put(s, strings);
+        }
+    }
+
+    private void parseMovid(JSONObject movie, Map<String, String[]> properties, JSONObject configuration, String baseUrl) throws JSONException {
+        if (movie.has(BACKDROP_PATH) && !movie.getString(BACKDROP_PATH).equals("null"))
+            properties.put(BACKDROP_PATH, new String[]{baseUrl + configuration.getJSONObject(IMAGES).getJSONArray("backdrop_sizes").get(1) + movie.getString(BACKDROP_PATH)});
+        if (movie.has(RELEASE_DATE)) {
+            properties.put(RELEASE_DATE, new String[]{movie.getString(RELEASE_DATE) + TIMESTAMP});
+        }
+        if (movie.has(ADULT)) {
+            properties.put(ADULT, new String[]{movie.getString(ADULT)});
+        }
+        if (movie.has(VOTE_AVERAGE)) {
+            properties.put(VOTE_AVERAGE, new String[]{movie.getString(VOTE_AVERAGE)});
+        }
+        if (movie.has(VOTE_COUNT)) {
+            properties.put(VOTE_COUNT, new String[]{movie.getString(VOTE_COUNT)});
+        }
+        if (movie.has(POPULARITY)) {
+            properties.put(POPULARITY, new String[]{movie.getString(POPULARITY)});
+        }
+    }
+
     private String getPathForMovie(JSONObject movie) throws JSONException {
-        if (!movie.has("release_date") || StringUtils.isEmpty(movie.getString("release_date"))) {
+        if (!movie.has(RELEASE_DATE) || StringUtils.isEmpty(movie.getString(RELEASE_DATE))) {
             return null;
         }
-        return "/movies/" + StringUtils.substringBeforeLast(movie.getString("release_date"), "-").replace("-", "/") + "/" + movie.getString("id");
+        return "/movies/" + StringUtils.substringBeforeLast(movie.getString(RELEASE_DATE), "-").replace("-", "/") + "/" + movie.getString("id");
     }
 
     /**
@@ -548,34 +597,24 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
             }
             if (splitPath.length <= 1) {
                 return getItemByIdentifier("root");
-            } else if (splitPath[1].equals("movies")) {
+            } else if (splitPath[1].equals(MOVIES)) {
                 switch (splitPath.length) {
-                    case 2:
-                        return getItemByIdentifier("movies-rootfolder");
                     case 3:
-                        return getItemByIdentifier("movies-folder-" + splitPath[2]);
+                        return getItemByIdentifier(MOVIES_FOLDERCACHEKEY_PREFIX + splitPath[2]);
                     case 4:
-                        return getItemByIdentifier("movies-folder-" + splitPath[2] + "/" + splitPath[3]);
+                        return getItemByIdentifier(MOVIES_FOLDERCACHEKEY_PREFIX + splitPath[2] + "/" + splitPath[3]);
                     case 5:
-                        return getItemByIdentifier("movie-" + splitPath[4]);
+                        return getItemByIdentifier(MOVIE_PREFIX + splitPath[4]);
                     case 6:
-                        return getItemByIdentifier("moviecredits-" + splitPath[4] + "-" + splitPath[5]);
+                        return getItemByIdentifier(MOVIECREDITS + splitPath[4] + "-" + splitPath[5]);
+                    default:
+                        return getItemByIdentifier("movies-rootfolder");
                 }
-            } else if (splitPath[1].equals("lists")) {
-                switch (splitPath.length) {
-                    case 2:
-                        return getItemByIdentifier("lists-rootfolder");
-                    case 3:
-                        return getItemByIdentifier("lists-" + splitPath[2]);
-                    case 4:
-                        return getItemByIdentifier("movieref-" + splitPath[2] + "-" + splitPath[3]);
-                }
-            } else if (splitPath[1].equals("persons")) {
-                switch (splitPath.length) {
-                    case 2:
-                        return getItemByIdentifier("persons-rootfolder");
-                    case 3:
-                        return getItemByIdentifier("person-" + splitPath[2]);
+            } else if (splitPath[1].equals(PERSONS)) {
+                if (splitPath.length == 2) {
+                    return getItemByIdentifier("persons-rootfolder");
+                } else if (splitPath.length == 3) {
+                    return getItemByIdentifier(PERSON_PREFIX + splitPath[2]);
                 }
             }
         } catch (ItemNotFoundException e) {
@@ -591,7 +630,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      */
     @Override
     public Set<String> getSupportedNodeTypes() {
-        return Sets.newHashSet("jnt:contentFolder", "jnt:movie", "jnt:moviesList", "jnt:cast", "jnt:crew");
+        return Sets.newHashSet(CONTENT_FOLDER, JNT_MOVIE, "jnt:moviesList", JNT_CAST, JNT_CREW);
     }
 
     /**
@@ -658,7 +697,6 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                 logger.debug("Request {} executed in {} ms", uri.toString(), (System.currentTimeMillis() - l));
             }
         } catch (Exception e) {
-            logger.error("Error while querying TMDB", e);
             throw new RepositoryException(e);
         }
     }
@@ -675,21 +713,21 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
             JSONObject movie;
             if (path.startsWith("/movies")) {
                 String movieId = StringUtils.substringAfterLast(path, "/");
-                if (cache.get("fullmovie-" + lang + "-" + movieId) != null) {
-                    movie = new JSONObject((String) cache.get("fullmovie-" + lang + "-" + movieId).getObjectValue());
+                if (cache.get(FULLMOVIE_PREFIX + lang + "-" + movieId) != null) {
+                    movie = new JSONObject((String) cache.get(FULLMOVIE_PREFIX + lang + "-" + movieId).getObjectValue());
                 } else {
                     movie = queryTMDB(API_MOVIE + movieId, "language", lang);
-                    cache.put(new Element("fullmovie-" + lang + "-" + movieId, movie.toString()));
+                    cache.put(new Element(FULLMOVIE_PREFIX + lang + "-" + movieId, movie.toString()));
                 }
-                if (propertyName.equals("jcr:title") && movie.has("title")) {
+                if (propertyName.equals(Constants.JCR_TITLE) && movie.has("title")) {
                     return new String[]{movie.getString("title")};
-                } else if (propertyName.equals("poster_path") && movie.has("poster_path")) {
+                } else if (propertyName.equals(POSTER_PATH) && movie.has(POSTER_PATH)) {
                     JSONObject configuration = getConfiguration();
-                    String baseUrl = configuration.getJSONObject("images").getString("base_url");
-                    return new String[]{baseUrl + configuration.getJSONObject("images").getJSONArray("poster_sizes").get(1) + movie.getString(propertyName)};
+                    String baseUrl = configuration.getJSONObject(IMAGES).getString(BASE_URL);
+                    return new String[]{baseUrl + configuration.getJSONObject(IMAGES).getJSONArray("poster_sizes").get(1) + movie.getString(propertyName)};
                 } else if (movie.has(propertyName) && !movie.getString(propertyName).equals("null")) {
                     return new String[]{movie.getString(propertyName)};
-                } else if(propertyName.equals("runtime")) {
+                } else if (propertyName.equals("runtime")) {
                     return new String[]{"0"};
                 }
                 return new String[]{""};
@@ -707,11 +745,11 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     public JSONObject getConfiguration() throws JSONException, RepositoryException {
         JSONObject configuration;
-        if (cache.get("configuration") != null) {
-            configuration = new JSONObject((String) cache.get("configuration").getObjectValue());
+        if (cache.get(CONFIGURATION) != null) {
+            configuration = new JSONObject((String) cache.get(CONFIGURATION).getObjectValue());
         } else {
             configuration = queryTMDB(API_CONFIGURATION);
-            cache.put(new Element("configuration", configuration.toString()));
+            cache.put(new Element(CONFIGURATION, configuration.toString()));
         }
 
         return configuration;
@@ -719,112 +757,18 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     @Override
     public List<String> search(ExternalQuery query) throws RepositoryException {
-        List<String> results = new ArrayList<String>();
+        List<String> results = new ArrayList<>();
         String nodeType = QueryHelper.getNodeType(query.getSource());
 
         try {
-            if (NodeTypeRegistry.getInstance().getNodeType("jnt:movie").isNodeType(nodeType)) {
-                JSONArray tmdbResult = null;
-
-                Map<String, Value> m = QueryHelper.getSimpleOrConstraints(query.getConstraint());
-                if (m.containsKey("jcr:title")) {
-                    tmdbResult = queryTMDB(API_SEARCH_MOVIE, "query", m.get("jcr:title").getString()).getJSONArray("results");
-                    if (tmdbResult != null) {
-                        processResultsArray(results, tmdbResult);
-                    }
-                } else {
-                    long pageNumber = query.getOffset() / 20;
-                    if (pageNumber < 100) {
-                        //Return up to the first 2000 most popular movies
-                        JSONObject discoverMovies = queryTMDB(API_DISCOVER_MOVIE, "sort_by", "popularity.desc", "page", String.valueOf(pageNumber + 1));
-                        if (discoverMovies.has("total_pages") && discoverMovies.has("results")) {
-                            int totalPages = discoverMovies.getInt("total_pages");
-                            tmdbResult = discoverMovies.getJSONArray("results");
-                            if (tmdbResult != null) {
-                                processResultsArray(results, tmdbResult);
-                            }
-                            for (long i = pageNumber + 2; i <= totalPages; i++) {
-                                processResultsArray(results, queryTMDB(API_DISCOVER_MOVIE, "sort_by", "popularity.desc", "page", String.valueOf(i)).getJSONArray(
-                                        "results"));
-                                if (results.size() >= query.getLimit()) {
-                                    break;
-                                }
-                            }
-                        }
-                        logger.info("Found {} results from TMDB", results.size());
-                    }
-                }
-            }
-            if (NodeTypeRegistry.getInstance().getNodeType("jnt:moviesList").isNodeType(nodeType)) {
-                Map<String, Value> m = QueryHelper.getSimpleAndConstraints(query.getConstraint());
-                if (m.isEmpty()) {
-                    JSONObject o = queryTMDB("/3/account/" + getAccountId() + "/lists", "session_id", getSessionId());
-                    JSONArray result = o.getJSONArray("results");
-                    for (int i = 0; i < result.length(); i++) {
-                        JSONObject list = result.getJSONObject(i);
-                        results.add("/lists/" + list.getString("id"));
-                    }
-                }
-            }
-
-            if (NodeTypeRegistry.getInstance().getNodeType("jnt:cast").isNodeType(nodeType)) {
-                Map<String, Value> m = QueryHelper.getSimpleAndConstraints(query.getConstraint());
-                if (m.containsKey("id")) {
-                    final String id = m.get("id").getString();
-                    JSONObject search;
-                    if (cache.get("movie_credits_query_" + id) != null) {
-                        search = new JSONObject((String) cache.get("movie_credits_query_" + id).getObjectValue());
-                    } else {
-                        search = queryTMDB("/3/person/" + id + "/movie_credits");
-                        cache.put(new Element("movie_credits_query_" + id, search.toString()));
-                    }
-
-                    JSONArray result = search.getJSONArray("cast");
-                    for (int i = 0; i < result.length(); i++) {
-                        JSONObject r = result.getJSONObject(i);
-                        ExternalData d = getItemByIdentifier("movie-" + r.getString("id"));
-                        if (d != null && d.getPath() != null) {
-                            for (String s : getChildren(d.getPath())) {
-                                if (s.endsWith(id)) {
-                                    results.add(d.getPath() + "/" + s);
-                                    if (results.size() == 20) {
-                                        return results;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (NodeTypeRegistry.getInstance().getNodeType("jnt:crew").isNodeType(nodeType)) {
-                Map<String, Value> m = QueryHelper.getSimpleAndConstraints(query.getConstraint());
-                if (m.containsKey("id")) {
-                    final String id = m.get("id").getString();
-                    JSONObject search;
-                    if (cache.get("movie_credits_query_" + id) != null) {
-                        search = new JSONObject((String) cache.get("movie_credits_query_" + id).getObjectValue());
-                    } else {
-                        search = queryTMDB("/3/person/" + id + "/movie_credits");
-                        cache.put(new Element("movie_credits_query_" + id, search.toString()));
-                    }
-
-                    JSONArray result = search.getJSONArray("crew");
-                    for (int i = 0; i < result.length(); i++) {
-                        JSONObject r = result.getJSONObject(i);
-                        ExternalData d = getItemByIdentifier("movie-" + r.getString("id"));
-                        if (d != null && d.getPath() != null) {
-                            for (String s : getChildren(d.getPath())) {
-                                if (s.endsWith("_" + r.getString("job") + "_" + id)) {
-                                    results.add(d.getPath() + "/" + s);
-                                    if (results.size() == 20) {
-                                        return results;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            if (NodeTypeRegistry.getInstance().getNodeType(JNT_MOVIE).isNodeType(nodeType)) {
+                searchMovie(query, results);
+            } else if (NodeTypeRegistry.getInstance().getNodeType(JNT_CAST).isNodeType(nodeType)) {
+                List<String> results1 = searchCast(query, results);
+                if (results1 != null) return results1;
+            } else if (NodeTypeRegistry.getInstance().getNodeType(JNT_CREW).isNodeType(nodeType)) {
+                List<String> results1 = searchCrew(query, results);
+                if (results1 != null) return results1;
             }
         } catch (UnsupportedRepositoryOperationException e) {
             //
@@ -834,44 +778,128 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         return results;
     }
 
+    @Nullable
+    private List<String> searchCrew(ExternalQuery query, List<String> results) throws RepositoryException, JSONException {
+        Map<String, Value> m = QueryHelper.getSimpleAndConstraints(query.getConstraint());
+        if (m.containsKey("id")) {
+            final String id = m.get("id").getString();
+            JSONObject search;
+            if (cache.get(MOVIE_CREDITS_QUERYCACHEKEYPREFIX + id) != null) {
+                search = new JSONObject((String) cache.get(MOVIE_CREDITS_QUERYCACHEKEYPREFIX + id).getObjectValue());
+            } else {
+                search = queryTMDB(API_PERSON + id + "/movie_credits");
+                cache.put(new Element(MOVIE_CREDITS_QUERYCACHEKEYPREFIX + id, search.toString()));
+            }
+
+            return processCrewResults(results, id, search);
+        }
+        return null;
+    }
+
+    @Nullable
+    private List<String> processCrewResults(List<String> results, String id, JSONObject search) throws JSONException, RepositoryException {
+        JSONArray result = search.getJSONArray("crew");
+        for (int i = 0; i < result.length(); i++) {
+            JSONObject r = result.getJSONObject(i);
+            ExternalData d = getItemByIdentifier(MOVIE_PREFIX + r.getString("id"));
+            if (d != null) {
+                for (String s : getChildren(d.getPath())) {
+                    if (s.endsWith("_" + r.getString("job") + "_" + id)) {
+                        results.add(d.getPath() + "/" + s);
+                        if (results.size() == 20) {
+                            return results;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    private List<String> searchCast(ExternalQuery query, List<String> results) throws RepositoryException, JSONException {
+        Map<String, Value> m = QueryHelper.getSimpleAndConstraints(query.getConstraint());
+        if (m.containsKey("id")) {
+            final String id = m.get("id").getString();
+            JSONObject search;
+            if (cache.get(MOVIE_CREDITS_QUERYCACHEKEYPREFIX + id) != null) {
+                search = new JSONObject((String) cache.get(MOVIE_CREDITS_QUERYCACHEKEYPREFIX + id).getObjectValue());
+            } else {
+                search = queryTMDB(API_PERSON + id + "/movie_credits");
+                cache.put(new Element(MOVIE_CREDITS_QUERYCACHEKEYPREFIX + id, search.toString()));
+            }
+
+            return processCastResults(results, id, search);
+        }
+        return null;
+    }
+
+    @Nullable
+    private List<String> processCastResults(List<String> results, String id, JSONObject search) throws JSONException, RepositoryException {
+        JSONArray result = search.getJSONArray("cast");
+        for (int i = 0; i < result.length(); i++) {
+            JSONObject r = result.getJSONObject(i);
+            ExternalData d = getItemByIdentifier(MOVIE_PREFIX + r.getString("id"));
+            if (d != null) {
+                for (String s : getChildren(d.getPath())) {
+                    if (s.endsWith(id)) {
+                        results.add(d.getPath() + "/" + s);
+                        if (results.size() == 20) {
+                            return results;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private void searchMovie(ExternalQuery query, List<String> results) throws RepositoryException, JSONException {
+        JSONArray tmdbResult = null;
+
+        Map<String, Value> m = QueryHelper.getSimpleOrConstraints(query.getConstraint());
+        if (m.containsKey(Constants.JCR_TITLE)) {
+            tmdbResult = queryTMDB(API_SEARCH_MOVIE, "query", m.get(Constants.JCR_TITLE).getString()).getJSONArray(RESULTS);
+            if (tmdbResult != null) {
+                processResultsArray(results, tmdbResult);
+            }
+        } else {
+            getMostPopularMovies(query, results);
+        }
+    }
+
+    private void getMostPopularMovies(ExternalQuery query, List<String> results) throws RepositoryException, JSONException {
+        JSONArray tmdbResult;
+        long pageNumber = query.getOffset() / 20;
+        if (pageNumber < 100) {
+            //Return up to the first 2000 most popular movies
+            JSONObject discoverMovies = queryTMDB(API_DISCOVER_MOVIE, "sort_by", "popularity.desc", "page", String.valueOf(pageNumber + 1));
+            if (discoverMovies.has("total_pages") && discoverMovies.has(RESULTS)) {
+                int totalPages = discoverMovies.getInt("total_pages");
+                tmdbResult = discoverMovies.getJSONArray(RESULTS);
+                if (tmdbResult != null) {
+                    processResultsArray(results, tmdbResult);
+                }
+                for (long i = pageNumber + 2; i <= totalPages; i++) {
+                    processResultsArray(results, queryTMDB(API_DISCOVER_MOVIE, "sort_by", "popularity.desc", "page", String.valueOf(i)).getJSONArray(
+                            RESULTS));
+                    if (results.size() >= query.getLimit()) {
+                        break;
+                    }
+                }
+            }
+            logger.info("Found {} results from TMDB", results.size());
+        }
+    }
+
     private void processResultsArray(List<String> results, JSONArray tmdbResult) throws JSONException {
         for (int i = 0; i < tmdbResult.length(); i++) {
             JSONObject jsonObject = tmdbResult.getJSONObject(i);
             final String path = getPathForMovie(jsonObject);
             if (path != null) {
                 results.add(path);
-                cache.put(new Element("indexedfullmovie-" + jsonObject.getString("id"), "indexed"));
+                cache.put(new Element(INDEXEDFULLMOVIECACHEKEYPREFIX + jsonObject.getString("id"), "indexed"));
             }
         }
-    }
-
-    private String getAccountId() throws RepositoryException, JSONException {
-        if (accountId == null) {
-            accountId = queryTMDB("/3/account", "session_id", getSessionId()).getString("id");
-        }
-        return accountId;
-    }
-
-
-    private String getSessionId() throws RepositoryException {
-        if (token != null && sessionId == null) {
-            JSONObject session = queryTMDB("/3/authentication/session/new", "request_token", token);
-            token = null;
-            try {
-                sessionId = session.getString("session_id");
-            } catch (JSONException e) {
-                throw new RepositoryException("No open session");
-            }
-        }
-        if (sessionId == null) {
-            throw new RepositoryException("No open session");
-        }
-        return sessionId;
-    }
-
-    public String createToken() throws RepositoryException, JSONException {
-        token = queryTMDB("/3/authentication/token/new").getString("request_token");
-        sessionId = null;
-        return token;
     }
 }
