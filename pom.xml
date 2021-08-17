@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.jahia.modules</groupId>
     <artifactId>jahia-modules</artifactId>
-    <version>8.0.0.0</version>
+    <version>8.1.0.0-SNAPSHOT</version>
   </parent>
   <groupId>org.jahia.demo</groupId>
   <artifactId>tmdb-provider</artifactId>
@@ -20,6 +20,7 @@
   <properties>
     <require-capability>osgi.extender;filter:="(osgi.extender=org.jahia.bundles.blueprint.extender.config)"</require-capability>
     <jahia-depends>default,bootstrap3-components,bootstrap3-core,external-provider</jahia-depends>
+    <jahia-module-signature>MCwCFCR4OLwEIo3wT7hHEhcxCLRp+DJqAhQ+Rxe43QQEVcO1O8lMQ+uxoHSWgw==</jahia-module-signature>
   </properties>
   <dependencies>
     <dependency>
@@ -63,9 +64,6 @@
               javax.jcr.query.qom,
               javax.servlet.http,
               net.sf.ehcache,
-              org.apache.commons.httpclient,
-              org.apache.commons.httpclient.methods,
-              org.apache.commons.httpclient.params,
               org.apache.commons.lang,
               org.jahia.bin,
               org.jahia.services.cache.ehcache,
