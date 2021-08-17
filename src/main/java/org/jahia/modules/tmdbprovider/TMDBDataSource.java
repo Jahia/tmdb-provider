@@ -4,13 +4,19 @@ import com.google.common.collect.Sets;
 import net.sf.ehcache.CacheException;
 import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpURL;
-import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.params.HttpClientParams;
-import org.apache.commons.httpclient.params.HttpConnectionManagerParams;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.util.EntityUtils;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.modules.external.ExternalQuery;
@@ -29,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.*;
+import java.net.URI;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
@@ -39,6 +46,10 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     public static final HashSet<String> LAZY_I18N_PROPERTIES = Sets.newHashSet("jcr:title", "overview", "tagline", "poster_path");
 
     public static final HashSet<String> ROOT_NODES = Sets.newHashSet("movies", "lists", "persons");
+    public static final int SOCKET_TIMEOUT = 60000;
+    public static final int CONNECT_TIMEOUT = 15000;
+    public static final int MAX_CONNECTIONS = 10;
+    public static final int DEFAULT_MAX_PER_ROUTE = 2;
 
     private static String API_URL = "api.themoviedb.org";
     private static String API_CONFIGURATION = "/3/configuration";
@@ -63,19 +74,25 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     private HttpClient httpClient;
 
     public TMDBDataSource() {
-        // instantiate HttpClient
-        HttpClientParams params = new HttpClientParams();
-        params.setAuthenticationPreemptive(true);
-        params.setCookiePolicy("ignoreCookies");
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setSocketTimeout(SOCKET_TIMEOUT)
+                .setConnectTimeout(CONNECT_TIMEOUT)
+                .setConnectionRequestTimeout(CONNECT_TIMEOUT)
+                .build();
 
-        HttpConnectionManagerParams cmParams = new HttpConnectionManagerParams();
-        cmParams.setConnectionTimeout(15000);
-        cmParams.setSoTimeout(60000);
-        cmParams.setDefaultMaxConnectionsPerHost(10);
+        Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
+                .register("http", PlainConnectionSocketFactory.getSocketFactory())
+                .build();
 
-        MultiThreadedHttpConnectionManager httpConnectionManager = new MultiThreadedHttpConnectionManager();
-        httpConnectionManager.setParams(cmParams);
-        httpClient = new HttpClient(params, httpConnectionManager);
+        PoolingHttpClientConnectionManager httpConnectionManager = new PoolingHttpClientConnectionManager(registry);
+        httpConnectionManager.setMaxTotal(MAX_CONNECTIONS);
+        httpConnectionManager.setDefaultMaxPerRoute(DEFAULT_MAX_PER_ROUTE);
+
+        httpClient = HttpClients.custom()
+                .setConnectionManager(httpConnectionManager)
+                .setDefaultRequestConfig(requestConfig)
+                .disableCookieManagement()
+                .build();
     }
 
     public void setHttpClient(HttpClient httpClient) {
@@ -607,23 +624,31 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     private JSONObject queryTMDB(String path, String... params) throws RepositoryException {
         try {
-            HttpURL url = new HttpURL(API_URL, 80, path);
+            URIBuilder builder = new URIBuilder()
+                    .setScheme("http")
+                    .setHost(API_URL)
+                    .setPath(path)
+                    .setParameter(API_KEY, apiKeyValue);
 
-            Map<String, String> m = new LinkedHashMap<String, String>();
             for (int i = 0; i < params.length; i += 2) {
-                m.put(params[i], params[i + 1]);
+                builder.setParameter(params[i], params[i + 1]);
             }
-            m.put(API_KEY, apiKeyValue);
 
-            url.setQuery(m.keySet().toArray(new String[m.size()]), m.values().toArray(new String[m.size()]));
+            URI uri = builder.build();
+
             long l = System.currentTimeMillis();
-            GetMethod httpMethod = new GetMethod(url.toString());
+            HttpGet getMethod = new HttpGet(uri);
+            CloseableHttpResponse resp = null;
+
             try {
-                httpClient.executeMethod(httpMethod);
-                return new JSONObject(httpMethod.getResponseBodyAsString());
+                resp = (CloseableHttpResponse) httpClient.execute(getMethod);
+                return new JSONObject(EntityUtils.toString(resp.getEntity()));
+
             } finally {
-                httpMethod.releaseConnection();
-                logger.debug("Request {} executed in {} ms",url, (System.currentTimeMillis() - l));
+                if (resp != null) {
+                    resp.close();
+                }
+                logger.debug("Request {} executed in {} ms", uri.toString(), (System.currentTimeMillis() - l));
             }
         } catch (Exception e) {
             logger.error("Error while querying TMDB", e);
