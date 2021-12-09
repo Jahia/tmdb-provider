@@ -17,6 +17,7 @@ import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.modules.external.ExternalQuery;
@@ -96,10 +97,8 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     private static String API_URL = "api.themoviedb.org";
     private static String API_CONFIGURATION = "/3/configuration";
     private static String API_MOVIE = "/3/movie/";
-    private static String API_TV = "/3/tv/";
     private static final String API_PERSON = "/3/person/";
     private static String API_DISCOVER_MOVIE = "/3/discover/movie";
-    private static String API_DISCOVER_TV = "/3/discover/tv";
     private static String API_SEARCH_MOVIE = "/3/search/movie";
     private static String API_KEY = "api_key";
 
