@@ -245,9 +245,9 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
             instance.set(Calendar.YEAR, Integer.valueOf(year));
             instance.set(Calendar.MONTH, Integer.valueOf(month));
             instance.set(Calendar.DAY_OF_MONTH, 1);
-            instance.roll(Calendar.DAY_OF_MONTH,false);
+            instance.roll(Calendar.DAY_OF_MONTH, false);
             JSONObject o = queryTMDB(API_DISCOVER_MOVIE, "primary_release_date.gte", date + "-01", "primary_release_date.lte",
-                                     date + "-"+instance.get(Calendar.DAY_OF_MONTH));
+                    date + "-" + instance.get(Calendar.DAY_OF_MONTH));
             JSONArray result = o.getJSONArray(RESULTS);
             for (int i = 0; i < result.length(); i++) {
                 JSONObject movie = result.getJSONObject(i);
@@ -498,7 +498,8 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                     movie.put(KEYWORDS, keywords.getJSONArray(KEYWORDS));
                 }
                 cache.put(new Element(FULLMOVIE_PREFIX + lang + "-" + movieId, movie.toString()));
-            } catch (RepositoryException | JSONException | IllegalArgumentException | IllegalStateException | CacheException e) {
+            } catch (RepositoryException | JSONException | IllegalArgumentException | IllegalStateException |
+                     CacheException e) {
                 logger.error("Error while getting movie", e);
                 movie = new JSONObject();
             }
@@ -510,7 +511,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
             String baseUrl = configuration.getJSONObject(IMAGES).getString(BASE_URL);
 
             properties = new HashMap<>();
-            parseMovid(movie, properties, configuration, baseUrl);
+            parseMovie(movie, properties, configuration, baseUrl);
             getArrayPropsAsMultiValue(movie, properties, "genres", "j:tagList");
             //Get keywords
             getArrayPropsAsMultiValue(movie, properties, KEYWORDS, "j:keywords");
@@ -553,7 +554,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         }
     }
 
-    private void parseMovid(JSONObject movie, Map<String, String[]> properties, JSONObject configuration, String baseUrl) throws JSONException {
+    private void parseMovie(JSONObject movie, Map<String, String[]> properties, JSONObject configuration, String baseUrl) throws JSONException {
         if (movie.has(BACKDROP_PATH) && !movie.getString(BACKDROP_PATH).equals("null"))
             properties.put(BACKDROP_PATH, new String[]{baseUrl + configuration.getJSONObject(IMAGES).getJSONArray("backdrop_sizes").get(1) + movie.getString(BACKDROP_PATH)});
         if (movie.has(RELEASE_DATE)) {
@@ -829,8 +830,43 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
             }
 
             return processCastResults(results, id, search);
+        } else {
+            long pageNumber = query.getOffset();
+            if (pageNumber < 1500) {
+                Set<String> processedMovies = new HashSet<>();
+                cache.getKeys().stream().filter(o -> o.toString().startsWith(MOVIE_PREFIX) || o.toString().startsWith(FULLMOVIE_PREFIX)).sorted(Comparator.naturalOrder()).skip(query.getOffset()).forEach(o -> {
+                    String str = o.toString();
+                    String movieID = null;
+                    if (str.startsWith(MOVIE_PREFIX)) {
+                        movieID = StringUtils.substringAfter(str, MOVIE_PREFIX);
+                    } else {
+                        movieID = StringUtils.substringAfterLast(str, "-");
+                    }
+                    if (!processedMovies.contains(movieID) && results.size() < query.getLimit()) {
+                        processedMovies.add(movieID);
+                        try {
+                            List<String> credits = new ArrayList<>();
+                            String pathForMovie = getPathForMovie(new JSONObject((String) cache.get(o).getObjectValue()));
+                            getMovieCredits(movieID, credits);
+                            credits.forEach(s -> {
+                                if (s.startsWith(CAST) && results.size() < query.getLimit()) {
+                                    results.add(pathForMovie + "/" + s);
+                                }
+                            });
+                        } catch (JSONException e) {
+                            throw new RuntimeException(e);
+                        } catch (RepositoryException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                });
+            }
         }
-        return null;
+        logger.info("returning cast members {}", results.size());
+        for (String result : results) {
+            logger.info(result);
+        }
+        return results;
     }
 
     @Nullable
