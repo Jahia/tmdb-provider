@@ -1,8 +1,8 @@
 package org.jahia.modules.tmdbprovider;
 
 import com.google.common.collect.Sets;
+import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheException;
-import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.HttpClient;
@@ -17,13 +17,12 @@ import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
-import org.jahia.modules.external.ExternalData;
-import org.jahia.modules.external.ExternalDataSource;
-import org.jahia.modules.external.ExternalQuery;
+import org.jahia.exceptions.JahiaInitializationException;
+import org.jahia.modules.external.*;
 import org.jahia.modules.external.events.EventService;
 import org.jahia.modules.external.query.QueryHelper;
 import org.jahia.osgi.BundleUtils;
-import org.jahia.services.cache.ehcache.EhCacheProvider;
+import org.jahia.services.cache.CacheProvider;
 import org.jahia.services.content.JCRSessionFactory;
 import org.jahia.services.content.JCRStoreProvider;
 import org.jahia.services.content.nodetypes.NodeTypeRegistry;
@@ -31,6 +30,13 @@ import org.joda.time.DateTime;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.metatype.annotations.Designate;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +46,20 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
+@Component(service={ExternalDataSource.class, TMDBDataSource.class}, immediate = true, configurationPid = "org.jahia.modules.tmdbprovider")
+@Designate(ocd = TMDBDataSource.Config.class)
 public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.LazyProperty, ExternalDataSource.Searchable {
+
+    @ObjectClassDefinition(name = "TMDB Provider", description = "A TMDB Provider configuration")
+    public @interface Config {
+        @AttributeDefinition(name = "TMDB API key", defaultValue = "", description = "The API key to use for The Movie Database")
+        String apiKey() default "";
+
+        @AttributeDefinition(name = "TMDB Mount path", defaultValue = "/sites/digitall/contents/tmdb", description = "The path at which to mount the database in the JCR")
+        String mountPoint() default "/sites/digitall/contents/tmdb";
+
+    }
+
     private static final Logger logger = LoggerFactory.getLogger(TMDBDataSource.class);
     public static final HashSet<String> LAZY_PROPERTIES = Sets.newHashSet("original_title", "homepage", "status", "runtime", "imdb_id", "budget", "revenue");
     public static final HashSet<String> LAZY_I18N_PROPERTIES = Sets.newHashSet("jcr:title", "overview", "tagline", "poster_path");
@@ -63,9 +82,11 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     private static Pattern YEAR_PATTERN = Pattern.compile("[0-9]{4,4}");
     private static Pattern DATE_PATTERN = Pattern.compile("[0-9]{4,4}/[0-9]{2,2}");
 
-    private EhCacheProvider ehCacheProvider;
-    private Ehcache cache;
-    private String apiKeyValue;
+    private static final List<String> EXTENDABLE_TYPES = Arrays.asList("nt:base");
+
+    private CacheProvider cacheProvider;
+    private Cache cache;
+    private String apiKeyValue = "";
 
     private String accountId;
     private String token;
@@ -73,7 +94,37 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     private HttpClient httpClient;
 
+    private ExternalContentStoreProviderFactory externalContentStoreProviderFactory;
+
+    private ExternalContentStoreProvider externalContentStoreProvider;
+
     public TMDBDataSource() {
+    }
+
+    public void setHttpClient(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
+
+    @Reference
+    public void setCacheProvider(CacheProvider cacheProvider) {
+        this.cacheProvider = cacheProvider;
+    }
+
+    public void setApiKeyValue(String apiKeyValue) {
+        this.apiKeyValue = apiKeyValue;
+    }
+
+    @Reference
+    public void setExternalContentStoreProviderFactory(ExternalContentStoreProviderFactory externalContentStoreProviderFactory) {
+        this.externalContentStoreProviderFactory = externalContentStoreProviderFactory;
+    }
+
+    @Activate
+    public void start(Config config) throws RepositoryException {
+        if (StringUtils.isEmpty(config.apiKey())) {
+            logger.warn("API key is not set, TMDB provider will not initialize.");
+            return;
+        }
         RequestConfig requestConfig = RequestConfig.custom()
                 .setSocketTimeout(SOCKET_TIMEOUT)
                 .setConnectTimeout(CONNECT_TIMEOUT)
@@ -93,28 +144,36 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
                 .setDefaultRequestConfig(requestConfig)
                 .disableCookieManagement()
                 .build();
-    }
-
-    public void setHttpClient(HttpClient httpClient) {
-        this.httpClient = httpClient;
-    }
-
-    public void setCacheProvider(EhCacheProvider ehCacheProvider) {
-        this.ehCacheProvider = ehCacheProvider;
-    }
-
-    public void setApiKeyValue(String apiKeyValue) {
-        this.apiKeyValue = apiKeyValue;
-    }
-
-    public void start() {
+        this.apiKeyValue = config.apiKey();
+        externalContentStoreProvider = externalContentStoreProviderFactory.newProvider();
+        externalContentStoreProvider.setDataSource(this);
+        externalContentStoreProvider.setExtendableTypes(EXTENDABLE_TYPES);
+        externalContentStoreProvider.setDynamicallyMounted(false);
+        externalContentStoreProvider.setMountPoint(config.mountPoint());
+        externalContentStoreProvider.setKey("TMDBProvider");
         try {
-            if (!ehCacheProvider.getCacheManager().cacheExists("tmdb-cache")) {
-                ehCacheProvider.getCacheManager().addCache("tmdb-cache");
+            externalContentStoreProvider.start();
+        } catch (JahiaInitializationException e) {
+            throw new RepositoryException("Error initializing TMDB Provider", e);
+        }
+
+        try {
+            if (!cacheProvider.getCacheManager().cacheExists("tmdb-cache")) {
+                cacheProvider.getCacheManager().addCache("tmdb-cache");
             }
-            cache = ehCacheProvider.getCacheManager().getCache("tmdb-cache");
+            cache = cacheProvider.getCacheManager().getCache("tmdb-cache");
         } catch (IllegalStateException | CacheException e) {
             logger.error("Error while initializing cache for IMDB", e);
+        }
+    }
+
+    @Deactivate
+    public void stop() {
+        if (httpClient != null) {
+            httpClient = null;
+        }
+        if (externalContentStoreProvider != null) {
+            externalContentStoreProvider.stop();
         }
     }
 

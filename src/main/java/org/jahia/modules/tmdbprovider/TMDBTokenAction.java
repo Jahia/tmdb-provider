@@ -7,17 +7,27 @@ import org.jahia.services.render.RenderContext;
 import org.jahia.services.render.Resource;
 import org.jahia.services.render.URLResolver;
 import org.json.JSONObject;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
+@Component(service=Action.class, immediate = true)
 public class TMDBTokenAction extends Action {
 
     private TMDBDataSource provider;
 
+    @Reference
     public void setDatasource(TMDBDataSource provider) {
         this.provider = provider;
+    }
+
+    @Activate
+    public void activate() {
+        setName("tmdbtoken");
     }
 
     @Override
@@ -27,6 +37,5 @@ public class TMDBTokenAction extends Action {
         r.put("token",token);
         r.put("url","http://www.themoviedb.org/authenticate/"+token);
         return new ActionResult(200, null, r);
-
     }
 }
