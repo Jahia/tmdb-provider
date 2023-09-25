@@ -148,7 +148,6 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         externalContentStoreProvider = externalContentStoreProviderFactory.newProvider();
         externalContentStoreProvider.setDataSource(this);
         externalContentStoreProvider.setExtendableTypes(EXTENDABLE_TYPES);
-        externalContentStoreProvider.setDynamicallyMounted(false);
         externalContentStoreProvider.setMountPoint(config.mountPoint());
         externalContentStoreProvider.setKey("TMDBProvider");
         try {
