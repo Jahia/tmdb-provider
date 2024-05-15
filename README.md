@@ -1,7 +1,7 @@
 # tmdb-provider
 
 ## Prerequisites
-* Jahia 7.1.0.0 or superior
+* Jahia 8.2.0.0 or superior
 * bootstrap 2 modules (bootstrap and bootstrap-component)
 * the prepackaged site Digitall must be deployed
 

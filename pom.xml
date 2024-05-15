@@ -26,7 +26,7 @@
     <dependency>
       <groupId>org.jahia.modules</groupId>
       <artifactId>external-provider</artifactId>
-      <version>4.0.0</version>
+      <version>4.7.0-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
@@ -60,6 +60,7 @@
         </dependencies>
         <configuration>
           <instructions>
+            <_dsannotations>*</_dsannotations>
             <Import-Package>
               org.jahia.modules.external; version="[2.0,5)",
               org.jahia.modules.external.events; version="[2.0,5)",
