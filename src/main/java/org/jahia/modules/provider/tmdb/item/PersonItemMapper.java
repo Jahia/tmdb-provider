@@ -44,10 +44,14 @@ import java.util.Map;
  *
  * @author Jerome Blanchard
  */
+@ItemMapperDescriptor(pathPattern = "^/persons/\\d+$", idPattern = "^person-\\d+$", supportedNodeType = {Naming.NodeType.MOVIE_PERSON},
+        hasLazyProperties = false)
 public class PersonItemMapper extends ItemMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PersonItemMapper.class);
-    public static final String PERSON_CACHE_PREFIX = "person-";
+    public static final String PATH_LABEL = "person";
+    public static final String ID_PREFIX = "person-";
+    public static final String CACHE_PREFIX = "person-";
 
     public PersonItemMapper() {
     }
@@ -57,9 +61,9 @@ public class PersonItemMapper extends ItemMapper {
     }
 
     @Override public ExternalData getData(String identifier) {
-        String pid = identifier.substring(ItemMapperDescriptor.PERSON.getIdPrefix().length());
-        if (getCache().get(PERSON_CACHE_PREFIX + pid) != null) {
-            return (ExternalData) getCache().get(PERSON_CACHE_PREFIX + pid).getObjectValue();
+        String pid = identifier.substring(ID_PREFIX.length());
+        if (getCache().get(CACHE_PREFIX + pid) != null) {
+            return (ExternalData) getCache().get(CACHE_PREFIX + pid).getObjectValue();
         } else {
             try {
                 PersonDb person = getApiClient().getPeople().getDetails(Integer.parseInt(pid), "en-US");
@@ -84,9 +88,9 @@ public class PersonItemMapper extends ItemMapper {
                 if (StringUtils.isNotEmpty(person.getDeathDay()) && !person.getDeathDay().equals("null")) {
                     properties.put("deathday", new String[] { person.getDeathDay() + "T00:00:00.000+00:00" });
                 }
-                String path = new PathBuilder(ItemMapperDescriptor.PERSON).append(pid).build();
+                String path = new PathBuilder(PersonsItemMapper.PATH_LABEL).append(pid).build();
                 ExternalData data = new ExternalData(identifier, path, Naming.NodeType.MOVIE_PERSON, properties);
-                getCache().put(new Element(PERSON_CACHE_PREFIX + pid, data));
+                getCache().put(new Element(CACHE_PREFIX + pid, data));
                 return data;
             } catch (TmdbException e) {
                 LOGGER.warn("Error while getting person data", e);
@@ -96,6 +100,10 @@ public class PersonItemMapper extends ItemMapper {
     }
 
     @Override public String getIdFromPath(String path) {
-        return ItemMapperDescriptor.PERSON.getIdPrefix().concat(PathHelper.getLeaf(path));
+        return ID_PREFIX.concat(PathHelper.getLeaf(path));
+    }
+
+    @Override public String getPathLabel() {
+        return PATH_LABEL;
     }
 }

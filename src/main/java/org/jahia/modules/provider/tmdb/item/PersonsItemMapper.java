@@ -35,7 +35,12 @@ import java.util.*;
  *
  * @author Jerome Blanchard
  */
+@ItemMapperDescriptor(pathPattern = "^/persons$", idPattern = "^persons$", supportedNodeType = {Naming.NodeType.CONTENT_FOLDER},
+        hasLazyProperties = false)
 public class PersonsItemMapper extends ItemMapper {
+
+    public static final String PATH_LABEL = "persons";
+    public static final String ID_PREFIX = "persons";
 
     public PersonsItemMapper() {
     }
@@ -46,12 +51,16 @@ public class PersonsItemMapper extends ItemMapper {
 
     @Override public ExternalData getData(String identifier) {
         Map<String, String[]> properties = new HashMap<>();
-        properties.put(Constants.JCR_TITLE, new String[] { ItemMapperDescriptor.PERSONS.getPathLabel() });
-        String path = new PathBuilder(ItemMapperDescriptor.PERSONS).build();
+        properties.put(Constants.JCR_TITLE, new String[] {PATH_LABEL});
+        String path = new PathBuilder(PATH_LABEL).build();
         return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
     }
 
     @Override public String getIdFromPath(String path) {
-        return ItemMapperDescriptor.PERSONS.getIdPrefix();
+        return ID_PREFIX;
+    }
+
+    @Override public String getPathLabel() {
+        return PATH_LABEL;
     }
 }

@@ -40,7 +40,10 @@ import java.util.stream.IntStream;
  *
  * @author Jerome Blanchard
  */
+@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}$", idPattern = "^myear-\\d{4}$", supportedNodeType =
+        {Naming.NodeType.CONTENT_FOLDER}, hasLazyProperties = false)
 public class MovieYearItemMapper extends ItemMapper {
+    public static final String ID_PREFIX = "myear-";
 
     public MovieYearItemMapper() {
     }
@@ -59,14 +62,18 @@ public class MovieYearItemMapper extends ItemMapper {
     }
 
     @Override public ExternalData getData(String identifier) {
-        final String year = StringUtils.substring(identifier, ItemMapperDescriptor.MOVIE_YEAR.getIdPrefix().length());
+        final String year = StringUtils.substring(identifier, ID_PREFIX.length());
         Map<String, String[]> properties = new HashMap<>();
         properties.put(Constants.JCR_TITLE, new String[] { year });
-        String path = new PathBuilder(ItemMapperDescriptor.MOVIES).append(year).build();
+        String path = new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).build();
         return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
     }
 
     @Override public String getIdFromPath(String path) {
-        return ItemMapperDescriptor.MOVIE_YEAR.getIdPrefix().concat(PathHelper.getLeaf(path));
+        return ID_PREFIX.concat(PathHelper.getLeaf(path));
+    }
+
+    @Override public String getPathLabel() {
+        return "";
     }
 }

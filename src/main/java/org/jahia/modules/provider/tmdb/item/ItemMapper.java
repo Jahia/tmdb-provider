@@ -37,6 +37,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ * Abstract class that define a ItemMapper to take part in the Data Provider.
+ * TODO: Make the node hierarchy in the contract by adding a parent reference to an Item Mapper allowing the Path generation of a node to
+ * be automatically generated. (may be a pb if many path can link the same identifier)
+ *
  * @author Jerome Blanchard
  */
 public abstract class ItemMapper {
@@ -67,6 +71,8 @@ public abstract class ItemMapper {
 
     abstract public String getIdFromPath(String path);
 
+    abstract public String getPathLabel();
+
     public List<String> search(String nodeType, ExternalQuery query) throws RepositoryException {
         return Collections.emptyList();
     }
@@ -85,7 +91,4 @@ public abstract class ItemMapper {
         }
         return configuration;
     }
-
-
-
 }

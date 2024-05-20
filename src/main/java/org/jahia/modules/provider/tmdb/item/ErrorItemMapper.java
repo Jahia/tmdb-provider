@@ -37,7 +37,12 @@ import java.util.Map;
  *
  * @author Jerome Blanchard
  */
+@ItemMapperDescriptor(pathPattern = "^/error$", idPattern = "^error$", supportedNodeType = {}, hasLazyProperties = false)
 public class ErrorItemMapper extends ItemMapper {
+
+    public static final String PATH_LABEL = "error";
+    public static final String ID_PREFIX = "";
+
 
     public ErrorItemMapper() {
     }
@@ -48,11 +53,15 @@ public class ErrorItemMapper extends ItemMapper {
 
     @Override public ExternalData getData(String identifier) {
         Map<String, String[]> properties = new HashMap<>();
-        properties.put(Constants.JCR_TITLE, new String[] { ItemMapperDescriptor.ERROR.getPathLabel() });
+        properties.put(Constants.JCR_TITLE, new String[] { PATH_LABEL });
         return new ExternalData(identifier, "", Naming.NodeType.CONTENT_FOLDER, properties);
     }
 
     @Override public String getIdFromPath(String path) {
-        return ItemMapperDescriptor.ERROR.getIdPrefix();
+        return ID_PREFIX;
+    }
+
+    @Override public String getPathLabel() {
+        return PATH_LABEL;
     }
 }

@@ -10,7 +10,7 @@ import org.jahia.modules.external.query.QueryHelper;
 import org.jahia.modules.provider.tmdb.helper.Naming;
 import org.jahia.modules.provider.tmdb.http.TmdbApacheHttpClient;
 import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
+import org.jahia.modules.provider.tmdb.item.ItemMapperProvider;
 import org.jahia.services.cache.CacheProvider;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -22,8 +22,13 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jcr.*;
-import java.util.*;
+import javax.jcr.Binary;
+import javax.jcr.ItemNotFoundException;
+import javax.jcr.PathNotFoundException;
+import javax.jcr.RepositoryException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @Component(service = { ExternalDataSource.class, TMDBDataSource.class }, immediate = true, configurationPid = "org.jahia.modules"
         + ".tmdbprovider") @Designate(ocd = TMDBDataSource.Config.class)
@@ -42,6 +47,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     private CacheProvider cacheProvider;
     private Cache cache;
     private TmdbApi apiClient;
+    private ItemMapperProvider mapperProvider;
     private ExternalContentStoreProviderFactory externalContentStoreProviderFactory;
     private ExternalContentStoreProvider externalContentStoreProvider;
 
@@ -85,6 +91,8 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         }
 
         apiClient = new TmdbApi(new TmdbApacheHttpClient(config.apiKey()));
+
+        mapperProvider = ItemMapperProvider.getInstance().initialize(cache, apiClient);
     }
 
     @Deactivate
@@ -103,8 +111,9 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      */
     @Override
     public List<String> getChildren(String path) throws RepositoryException {
-        Optional<ItemMapperDescriptor> itemMapper = ItemMapperDescriptor.findByPath(path);
-        return getMapperInstance(itemMapper.orElse(ItemMapperDescriptor.ERROR)).listChildren(path);
+        ItemMapper mapper = mapperProvider.findByPath(path)
+                .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path: " + path));
+        return mapper.listChildren(path);
     }
 
     /**
@@ -116,8 +125,9 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      */
     @Override public ExternalData getItemByIdentifier(String identifier) throws ItemNotFoundException {
         try {
-            Optional<ItemMapperDescriptor> itemMapper = ItemMapperDescriptor.findById(identifier);
-            ExternalData data = getMapperInstance(itemMapper.orElse(ItemMapperDescriptor.ERROR)).getData(identifier);
+            ItemMapper mapper = mapperProvider.findById(identifier)
+                    .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for identifier:" + identifier));
+            ExternalData data =  mapper.getData(identifier);
             if (data == null) throw new ItemNotFoundException("No item found for identifier: " + identifier);
             return data;
         } catch (RepositoryException e) {
@@ -134,8 +144,8 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      */
     @Override public ExternalData getItemByPath(String path) throws PathNotFoundException {
         try {
-            Optional<ItemMapperDescriptor> itemMapper = ItemMapperDescriptor.findByPath(path);
-            ItemMapper mapper = getMapperInstance(itemMapper.orElse(ItemMapperDescriptor.ERROR));
+            ItemMapper mapper = mapperProvider.findByPath(path)
+                    .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path: " + path));
             ExternalData data = mapper.getData(mapper.getIdFromPath(path));
             if (data == null) throw new PathNotFoundException("No item found for path: " + path);
             return data;
@@ -188,8 +198,8 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     @Override public String[] getI18nPropertyValues(String path, String lang, String propertyName) throws PathNotFoundException {
         try {
-            Optional<ItemMapperDescriptor> itemMapper = ItemMapperDescriptor.findByPathForProps(path);
-            ItemMapper mapper = getMapperInstance(itemMapper.orElse(ItemMapperDescriptor.ERROR));
+            ItemMapper mapper = mapperProvider.findByPathForProps(path)
+                    .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path:" + path));
             return mapper.getProperty(mapper.getIdFromPath(path), lang, propertyName);
         } catch (RepositoryException e) {
             throw new PathNotFoundException("No item found for path: " + path, e);
@@ -204,23 +214,13 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         try {
             List<String> results = new ArrayList<>();
             String nodeType = QueryHelper.getNodeType(query.getSource());
-            List<ItemMapperDescriptor> itemMappers = ItemMapperDescriptor.findByType(nodeType);
-            for (ItemMapperDescriptor mapper : itemMappers) {
-                results.addAll(getMapperInstance(mapper).search(nodeType, query));
+            List<ItemMapper> itemMappers = mapperProvider.listForType(nodeType);
+            for (ItemMapper mapper : itemMappers) {
+                results.addAll(mapper.search(nodeType, query));
             }
             return results;
         } catch (RepositoryException e) {
             throw new PathNotFoundException("Error while searching item for query " + query, e);
-        }
-    }
-
-    private ItemMapper getMapperInstance(ItemMapperDescriptor mapper) throws RepositoryException {
-        try {
-            return Class.forName(mapper.getMapperClass().getName())
-                        .asSubclass(ItemMapper.class).getDeclaredConstructor().newInstance()
-                        .withCache(cache).withApiClient(apiClient);
-        } catch (ReflectiveOperationException e) {
-            throw new RepositoryException("Error while building mapper instance for mapper: " + mapper, e);
         }
     }
 }

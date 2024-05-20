@@ -29,8 +29,10 @@ package org.jahia.modules.provider.tmdb.helper;
  */
 public class PathHelper {
 
-    public static boolean isValid(String path) {
-        return path.matches("^(/[^/ ]*)+/?$");
+    public static void ensureValidity(String path) {
+        if (!path.matches("^(/[^/ ]*)+/?$")) {
+            throw new IllegalArgumentException("Invalid path: " + path);
+        }
     }
 
     public static String getLeaf(String path) {

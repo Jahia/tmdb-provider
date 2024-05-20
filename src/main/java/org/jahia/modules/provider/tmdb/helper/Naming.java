@@ -66,11 +66,9 @@ public class Naming {
     }
 
     public static class Property {
-
         public static final String POSTER_PATH = "poster_path";
         public static final String IMAGES = "images";
         public static final String BASE_URL = "base_url";
-
     }
 
 }

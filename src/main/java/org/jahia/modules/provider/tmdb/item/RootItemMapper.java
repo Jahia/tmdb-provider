@@ -36,9 +36,12 @@ import java.util.*;
  *
  * @author Jerome Blanchard
  */
+@ItemMapperDescriptor(pathPattern = "^/$", idPattern = "^root$", supportedNodeType = {Naming.NodeType.CONTENT_FOLDER},
+        hasLazyProperties = false)
 public class RootItemMapper extends ItemMapper {
 
-    private static final List<String> CHILDREN = Arrays.asList(ItemMapperDescriptor.MOVIES.toString(), ItemMapperDescriptor.PERSONS.toString());
+    private static final List<String> CHILDREN = Arrays.asList(MoviesItemMapper.PATH_LABEL, PersonsItemMapper.PATH_LABEL);
+    public static final String ID_PREFIX = "root";
 
     public RootItemMapper() {
     }
@@ -55,6 +58,10 @@ public class RootItemMapper extends ItemMapper {
     }
 
     @Override public String getIdFromPath(String path) {
-        return ItemMapperDescriptor.ROOT.getIdPrefix();
+        return ID_PREFIX;
+    }
+
+    @Override public String getPathLabel() {
+        return "";
     }
 }

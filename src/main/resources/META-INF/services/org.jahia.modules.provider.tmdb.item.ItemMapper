@@ -1,0 +1,10 @@
+org.jahia.modules.provider.tmdb.item.ErrorItemMapper
+org.jahia.modules.provider.tmdb.item.RootItemMapper
+org.jahia.modules.provider.tmdb.item.PersonsItemMapper
+org.jahia.modules.provider.tmdb.item.PersonItemMapper
+org.jahia.modules.provider.tmdb.item.MoviesItemMapper
+org.jahia.modules.provider.tmdb.item.MovieYearItemMapper
+org.jahia.modules.provider.tmdb.item.MovieMonthItemMapper
+org.jahia.modules.provider.tmdb.item.MovieItemMapper
+org.jahia.modules.provider.tmdb.item.MovieCreditsItemMapper
+org.jahia.modules.provider.tmdb.item.MovieReferenceItemMapper

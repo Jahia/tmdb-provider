@@ -47,9 +47,13 @@ import java.util.*;
 /**
  * @author Jerome Blanchard
  */
+@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{4}-\\d{2}/\\d+/(cast_|crew_)\\d+$", idPattern = "^mcredits-\\d+-(cast_|crew_)\\d+$",
+        supportedNodeType = {Naming.NodeType.CREW, Naming.NodeType.CAST}, hasLazyProperties = false)
 public class MovieCreditsItemMapper extends ItemMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MovieCreditsItemMapper.class);
+    public static final String PATH_LABEL = "credits";
+    public static final String ID_PREFIX = "mcredits-";
     public static final String CAST = "cast_";
     public static final String CREW = "crew_";
 
@@ -61,7 +65,7 @@ public class MovieCreditsItemMapper extends ItemMapper {
     }
 
     @Override public ExternalData getData(String identifier) {
-        String cleanId = identifier.substring(ItemMapperDescriptor.MOVIE_CREDITS.getIdPrefix().length());
+        String cleanId = identifier.substring(ID_PREFIX.length());
         String creditsId = StringUtils.substringAfter(cleanId, "-");
         String movieId = StringUtils.substringBefore(cleanId, "-");
 
@@ -73,7 +77,8 @@ public class MovieCreditsItemMapper extends ItemMapper {
                 Credits credits = getApiClient().getMovies().getCredits(Integer.parseInt(movieId), "en-US");
                 String year = StringUtils.substringBefore(movie.getReleaseDate(), "-");
                 String date = StringUtils.substringBeforeLast(movie.getReleaseDate(), "-");
-                String path = new PathBuilder(ItemMapperDescriptor.MOVIES).append(year).append(date).append(movieId).append(credits.getId()).build();
+                String path = new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year)
+                        .append(date).append(movieId).append(creditsId).build();
                 String baseUrl = getConfiguration().getImageConfig().getBaseUrl();
                 if (creditsId.startsWith(CREW)) {
                     String pid = creditsId.substring(CREW.length());
@@ -86,7 +91,7 @@ public class MovieCreditsItemMapper extends ItemMapper {
                     if (StringUtils.isNotEmpty(crew.getJob())) {
                         properties.put("job", new String[] { crew.getJob() });
                     }
-                    properties.put("person", new String[] { ItemMapperDescriptor.PERSONS.getIdPrefix() + crew.getId() });
+                    properties.put("person", new String[] { PersonsItemMapper.ID_PREFIX + crew.getId() });
                     if (StringUtils.isNotEmpty(crew.getName())) {
                         properties.put("name", new String[] { crew.getName() });
                     }
@@ -158,12 +163,16 @@ public class MovieCreditsItemMapper extends ItemMapper {
     }
 
     @Override public String getIdFromPath(String path) {
-        return ItemMapperDescriptor.MOVIE_CREDITS.getIdPrefix().concat(PathHelper.getLeaf(path));
+        return ID_PREFIX.concat(PathHelper.getParent(path)).concat("-").concat(PathHelper.getLeaf(path));
+    }
+
+    @Override public String getPathLabel() {
+        return PATH_LABEL;
     }
 
     private String buildPath(String mid, String cid, String releaseDate) {
         String year = StringUtils.substringBefore(releaseDate, "-");
         String date = StringUtils.substringBeforeLast(releaseDate, "-");
-        return new PathBuilder(ItemMapperDescriptor.MOVIES).append(year).append(date).append(mid).append(cid).build();
+        return new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(date).append(mid).append(cid).build();
     }
 }

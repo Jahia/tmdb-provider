@@ -38,7 +38,11 @@ import java.util.stream.IntStream;
  *
  * @author Jerome Blanchard
  */
+@ItemMapperDescriptor(pathPattern = "^/movies$", idPattern = "^movies$", supportedNodeType = {Naming.NodeType.CONTENT_FOLDER},
+        hasLazyProperties = false)
 public class MoviesItemMapper extends ItemMapper {
+    public static final String PATH_LABEL = "movies";
+    public static final String ID_PREFIX = "movies";
 
     private static final List<String> CHILDREN = IntStream.rangeClosed(1900, Calendar.getInstance().get(Calendar.YEAR))
             .boxed().sorted(Collections.reverseOrder())
@@ -54,12 +58,16 @@ public class MoviesItemMapper extends ItemMapper {
 
     @Override public ExternalData getData(String identifier) {
         Map<String, String[]> properties = new HashMap<>();
-        properties.put(Constants.JCR_TITLE, new String[] { ItemMapperDescriptor.MOVIES.getPathLabel() });
-        String path = new PathBuilder(ItemMapperDescriptor.MOVIES).build();
+        properties.put(Constants.JCR_TITLE, new String[] { PATH_LABEL });
+        String path = new PathBuilder(PATH_LABEL).build();
         return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
     }
 
     @Override public String getIdFromPath(String path) {
-        return ItemMapperDescriptor.MOVIES.getIdPrefix();
+        return ID_PREFIX;
+    }
+
+    @Override public String getPathLabel() {
+        return PATH_LABEL;
     }
 }

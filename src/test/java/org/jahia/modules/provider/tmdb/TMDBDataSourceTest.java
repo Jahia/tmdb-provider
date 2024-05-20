@@ -28,21 +28,23 @@ import net.sf.ehcache.CacheManager;
 import org.jahia.modules.external.ExternalContentStoreProvider;
 import org.jahia.modules.external.ExternalContentStoreProviderFactory;
 import org.jahia.modules.external.ExternalData;
+import org.jahia.modules.external.ExternalQuery;
+import org.jahia.modules.external.query.QueryHelper;
 import org.jahia.modules.provider.tmdb.helper.Naming;
 import org.jahia.services.cache.CacheProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.mockito.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.RepositoryException;
+import javax.jcr.Value;
 import java.lang.annotation.Annotation;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -63,7 +65,6 @@ public class TMDBDataSourceTest {
     private CacheManager cacheManager;
     @Mock
     private Cache cache;
-
     @InjectMocks
     private TMDBDataSource tmdbDataSource;
 
@@ -85,7 +86,7 @@ public class TMDBDataSourceTest {
     }
 
     @Test
-    public void testGetByPath() throws RepositoryException {
+    public void testGetItemByPath() throws RepositoryException {
         ExternalData root = tmdbDataSource.getItemByPath("/");
         assertNotNull(root);
         assertEquals("root", root.getId());
@@ -97,6 +98,36 @@ public class TMDBDataSourceTest {
         assertEquals("movies", movies.getId());
         assertEquals("/movies", movies.getPath());
         assertEquals(Naming.NodeType.CONTENT_FOLDER, movies.getType());
+
+        ExternalData yearfolder = tmdbDataSource.getItemByPath("/movies/1999");
+        assertNotNull(yearfolder);
+        assertEquals("myear-1999", yearfolder.getId());
+        assertEquals("/movies/1999", yearfolder.getPath());
+        assertEquals(Naming.NodeType.CONTENT_FOLDER, yearfolder.getType());
+
+        ExternalData monthfolder = tmdbDataSource.getItemByPath("/movies/1999/1999-03");
+        assertNotNull(monthfolder);
+        assertEquals("mmonth-1999-03", monthfolder.getId());
+        assertEquals("/movies/1999/1999-03", monthfolder.getPath());
+        assertEquals(Naming.NodeType.CONTENT_FOLDER, monthfolder.getType());
+
+        ExternalData movie = tmdbDataSource.getItemByPath("/movies/1999/1999-03/603");
+        assertNotNull(movie);
+        assertEquals("mid-603", movie.getId());
+        assertEquals("/movies/1999/1999-03/603", movie.getPath());
+        assertEquals(Naming.NodeType.MOVIE, movie.getType());
+
+        ExternalData keanu = tmdbDataSource.getItemByPath("/movies/1999/1999-03/603/cast_6384");
+        assertNotNull(keanu);
+        assertEquals("mcredits-603-cast_6384", keanu.getId());
+        assertEquals("/movies/1999/1999-03/603/cast_6384", keanu.getPath());
+        assertEquals(Naming.NodeType.CAST, keanu.getType());
+
+        ExternalData joel = tmdbDataSource.getItemByPath("/movies/1999/1999-03/603/crew_1091");
+        assertNotNull(joel);
+        assertEquals("mcredits-603-crew_1091", joel.getId());
+        assertEquals("/movies/1999/1999-03/603/crew_1091", joel.getPath());
+        assertEquals(Naming.NodeType.CREW, joel.getType());
     }
 
     @Test
@@ -167,16 +198,16 @@ public class TMDBDataSourceTest {
         assertEquals("/movies/1999/1999-09/14", onemovie.getPath());
         assertEquals(Naming.NodeType.MOVIE, onemovie.getType());
 
-        ExternalData crew = tmdbDataSource.getItemByIdentifier("mcredits-14-crew_72102");
+        ExternalData crew = tmdbDataSource.getItemByIdentifier("mcredits-866398-crew_72102");
         assertNotNull(crew);
-        assertEquals("mcredits-14-crew_72102", crew.getId());
-        assertEquals("/movies/1999/1999-09/14/crew_72102", crew.getPath());
+        assertEquals("mcredits-866398-crew_72102", crew.getId());
+        assertEquals("/movies/2024/2024-01/866398/crew_72102", crew.getPath());
         assertEquals(Naming.NodeType.CREW, crew.getType());
 
-        ExternalData cast = tmdbDataSource.getItemByIdentifier("mcredits-14-cast_976");
+        ExternalData cast = tmdbDataSource.getItemByIdentifier("mcredits-866398-cast_976");
         assertNotNull(cast);
-        assertEquals("mcredits-14-cast_976", cast.getId());
-        assertEquals("/movies/1999/1999-09/14/cast_976", cast.getPath());
+        assertEquals("mcredits-866398-cast_976", cast.getId());
+        assertEquals("/movies/2024/2024-01/866398/cast_976", cast.getPath());
         assertEquals(Naming.NodeType.CAST, cast.getType());
 
         ExternalData persons = tmdbDataSource.getItemByIdentifier("persons");
@@ -193,8 +224,34 @@ public class TMDBDataSourceTest {
     }
 
     @Test
-    public void testSearch() throws RepositoryException {
+    public void testSearchMovie() throws RepositoryException {
+        ExternalQuery query = Mockito.mock(ExternalQuery.class);
+        Mockito.when(query.getLimit()).thenReturn(50l);
+        Mockito.when(query.getOffset()).thenReturn(0l);
 
+        try (MockedStatic<QueryHelper> helper = Mockito.mockStatic(QueryHelper.class)) {
+            helper.when(() -> QueryHelper.getNodeType(Mockito.any())).thenReturn(Naming.NodeType.MOVIE);
+            Map<String, Value> map = new HashMap<>();
+            helper.when(() -> QueryHelper.getSimpleOrConstraints(Mockito.any())).thenReturn(map);
+
+            List<String> results = tmdbDataSource.search(query);
+            assertFalse(results.isEmpty());
+            LOGGER.info("Search movies without title: " + results.size());
+        }
+
+        try (MockedStatic<QueryHelper> helper = Mockito.mockStatic(QueryHelper.class)) {
+            helper.when(() -> QueryHelper.getNodeType(Mockito.any())).thenReturn(Naming.NodeType.MOVIE);
+            Map<String, Value> map = new HashMap<>();
+            Value matrixTitleValue = Mockito.mock(Value.class);
+            Mockito.when(matrixTitleValue.getString()).thenReturn("The Matrix");
+            map.put("jcr:title", matrixTitleValue);
+            helper.when(() -> QueryHelper.getSimpleOrConstraints(Mockito.any())).thenReturn(map);
+
+            List<String> results = tmdbDataSource.search(query);
+            assertFalse(results.isEmpty());
+            assertTrue(results.contains("/movies/1999/1999-03/603"));
+            LOGGER.info("Search movies for title 'The Matrix': " + results.size());
+        }
     }
 
     class TestConfig implements TMDBDataSource.Config {

@@ -59,9 +59,13 @@ import java.util.stream.Collectors;
  *
  * @author Jerome Blanchard
  */
+@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{4}-\\d{2}/\\d+$", idPattern = "^mid-\\d+", supportedNodeType =
+        {Naming.NodeType.MOVIE}, hasLazyProperties = true)
 public class MovieItemMapper extends ItemMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MovieItemMapper.class);
+    public static final String PATH_LABEL = "movie";
+    public static final String ID_PREFIX = "mid-";
     public static final String CAST = "cast_";
     public static final String CREW = "crew_";
     private static final Set<String> LAZY_PROPERTIES = Set.of("original_title", "homepage", "status", "runtime", "imdb_id", "budget", "revenue");
@@ -93,7 +97,7 @@ public class MovieItemMapper extends ItemMapper {
     }
 
     @Override public ExternalData getData(String identifier) {
-        String mid = identifier.substring(ItemMapperDescriptor.MOVIE_ID.getIdPrefix().length());
+        String mid = identifier.substring(ID_PREFIX.length());
         if (getCache().get(Naming.Cache.MOVIE_CACHE_PREFIX + mid) != null) {
             return (ExternalData) getCache().get(Naming.Cache.MOVIE_CACHE_PREFIX + mid).getObjectValue();
         } else {
@@ -133,7 +137,11 @@ public class MovieItemMapper extends ItemMapper {
     }
 
     @Override public String getIdFromPath(String path) {
-        return ItemMapperDescriptor.MOVIE_ID.getIdPrefix().concat(PathHelper.getLeaf(path));
+        return ID_PREFIX.concat(PathHelper.getLeaf(path));
+    }
+
+    @Override public String getPathLabel() {
+        return PATH_LABEL;
     }
 
     @Override public List<String> search(String nodeType, ExternalQuery query) throws RepositoryException {
@@ -143,19 +151,24 @@ public class MovieItemMapper extends ItemMapper {
         try {
             MovieResultsPage page;
             if (m.containsKey(Constants.JCR_TITLE)) {
+                int pageNb = 1;
                 do {
                     page = getApiClient().getSearch()
-                            .searchMovie(m.get(Constants.JCR_TITLE).getString(), false, lang, null, null, null, null);
-                    results.addAll(page.getResults().stream().map(movie -> buildMoviePath(Integer.toString(movie.getId()), movie.getReleaseDate())).collect(Collectors.toList()));
-                } while (page.getPage() < page.getTotalPages() || results.size() >= query.getLimit());
+                            .searchMovie(m.get(Constants.JCR_TITLE).getString(), false, lang, null, pageNb, null, null);
+                    results.addAll(page.getResults().stream().filter(movie -> StringUtils.isNotEmpty(movie.getReleaseDate()))
+                            .map(movie -> buildMoviePath(Integer.toString(movie.getId()),movie.getReleaseDate())).collect(Collectors.toList()));
+                    pageNb++;
+                } while (page.getPage() < page.getTotalPages() && results.size() < query.getLimit());
             } else {
+                DiscoverMovieParamBuilder builder = new DiscoverMovieParamBuilder();
+                builder.sortBy(DiscoverMovieSortBy.POPULARITY_DESC);
+                builder.page((int) Math.max(1, query.getOffset() / query.getLimit()));
                 do {
-                    DiscoverMovieParamBuilder builder = new DiscoverMovieParamBuilder();
-                    builder.sortBy(DiscoverMovieSortBy.POPULARITY_DESC);
-                    builder.page((int) query.getOffset() / 20);
                     page = getApiClient().getDiscover().getMovie(builder);
-                    results.addAll(page.getResults().stream().map(movie -> buildMoviePath(Integer.toString(movie.getId()), movie.getReleaseDate())).collect(Collectors.toList()));
-                } while (page.getPage() < page.getTotalPages() || results.size() >= query.getLimit());
+                    results.addAll(page.getResults().stream().filter(movie -> StringUtils.isNotEmpty(movie.getReleaseDate()))
+                            .map(movie -> buildMoviePath(Integer.toString(movie.getId()), movie.getReleaseDate())).collect(Collectors.toList()));
+                    builder.page(page.getPage() + 1);
+                } while (page.getPage() < page.getTotalPages() && results.size() < query.getLimit() && results.size() < 500);
             }
         } catch (TmdbException e) {
             throw new RepositoryException("Error while searching movie", e);
@@ -218,6 +231,6 @@ public class MovieItemMapper extends ItemMapper {
     private String buildMoviePath(String mid, String releaseDate) {
         String year = StringUtils.substringBefore(releaseDate, "-");
         String date = StringUtils.substringBeforeLast(releaseDate, "-");
-        return new PathBuilder(ItemMapperDescriptor.MOVIES).append(year).append(date).append(mid).build();
+        return new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(date).append(mid).build();
     }
 }

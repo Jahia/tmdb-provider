@@ -44,9 +44,12 @@ import java.util.stream.Collectors;
  *
  * @author Jerome Blanchard
  */
+@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{4}-\\d{2}$", idPattern = "^mmonth-\\d{4}-\\d{2}$", supportedNodeType =
+        {Naming.NodeType.CONTENT_FOLDER}, hasLazyProperties = false)
 public class MovieMonthItemMapper extends ItemMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MovieMonthItemMapper.class);
+    public static final String ID_PREFIX = "mmonth-";
 
     public MovieMonthItemMapper() {
     }
@@ -85,15 +88,19 @@ public class MovieMonthItemMapper extends ItemMapper {
     }
 
     @Override public ExternalData getData(String identifier) {
-        final String date = StringUtils.substring(identifier, ItemMapperDescriptor.MOVIE_MONTH.getIdPrefix().length());
+        final String date = StringUtils.substring(identifier, ID_PREFIX.length());
         final String year = date.split("-")[0];
         Map<String, String[]> properties = new HashMap<>();
         properties.put(Constants.JCR_TITLE, new String[] { date });
-        String path = new PathBuilder(ItemMapperDescriptor.MOVIE_REF).append(year).append(date).build();
+        String path = new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(date).build();
         return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
     }
 
     @Override public String getIdFromPath(String path) {
-        return ItemMapperDescriptor.MOVIE_MONTH.getIdPrefix().concat(PathHelper.getLeaf(path));
+        return ID_PREFIX.concat(PathHelper.getLeaf(path));
+    }
+
+    @Override public String getPathLabel() {
+        return "";
     }
 }
