@@ -40,9 +40,9 @@ import java.util.stream.Collectors;
 public class ItemMapperProvider {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ItemMapperProvider.class);
-    private Map<Class<? extends ItemMapper>, ItemMapper> mappers;
-    private Map<ItemMapperDescriptor, Class<? extends ItemMapper>> descriptors;
-    private boolean initiliazed = false;
+    private final Map<Class<? extends ItemMapper>, ItemMapper> mappers;
+    private final Map<ItemMapperDescriptor, Class<? extends ItemMapper>> descriptors;
+    private boolean initialized = false;
 
     private static class ItemMapperRegistryHolder {
         private final static ItemMapperProvider INSTANCE = new ItemMapperProvider();
@@ -59,8 +59,8 @@ public class ItemMapperProvider {
 
     public synchronized ItemMapperProvider initialize(Cache cache, TmdbApi apiClient) {
         LOGGER.info("Initializing ItemMapperProvider");
-        if (!initiliazed) {
-            ServiceLoader<ItemMapper> loader = ServiceLoader.load(ItemMapper.class);
+        if (!initialized) {
+            ServiceLoader<ItemMapper> loader = ServiceLoader.load(ItemMapper.class, this.getClass().getClassLoader());
             loader.forEach(n -> {
                 ItemMapperDescriptor descriptor = n.getClass().getAnnotation(ItemMapperDescriptor.class);
                 if (descriptor != null) {
@@ -69,7 +69,7 @@ public class ItemMapperProvider {
                     LOGGER.info("Registering ItemMapper: {}", n.getClass().getName());
                 }
             });
-            initiliazed = true;
+            initialized = true;
         }
         return this;
     }
