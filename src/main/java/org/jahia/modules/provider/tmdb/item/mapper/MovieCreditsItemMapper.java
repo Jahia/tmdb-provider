@@ -21,7 +21,7 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item;
+package org.jahia.modules.provider.tmdb.item.mapper;
 
 import info.movito.themoviedbapi.model.movies.Cast;
 import info.movito.themoviedbapi.model.movies.Credits;
@@ -37,6 +37,8 @@ import org.jahia.modules.external.query.QueryHelper;
 import org.jahia.modules.provider.tmdb.helper.Naming;
 import org.jahia.modules.provider.tmdb.helper.PathBuilder;
 import org.jahia.modules.provider.tmdb.helper.PathHelper;
+import org.jahia.modules.provider.tmdb.item.ItemMapper;
+import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,11 +149,13 @@ public class MovieCreditsItemMapper extends ItemMapper {
                 }
                 if (Naming.NodeType.CAST.equals(nodeType)) {
                     credits.getCrew().stream()
-                            .map(c -> buildPath(Integer.toString(c.getId()), CREW.concat(id), c.getReleaseDate()))
+                            .filter(c -> StringUtils.isNotEmpty(c.getReleaseDate()))
+                            .map(c -> buildPath(Integer.toString(c.getId()), CAST.concat(id), c.getReleaseDate()))
                             .forEach(results::add);
                 }
                 if (Naming.NodeType.CREW.equals(nodeType) && m.containsKey("id")) {
                     credits.getCrew().stream()
+                            .filter(c -> StringUtils.isNotEmpty(c.getReleaseDate()))
                             .map(c -> buildPath(Integer.toString(c.getId()), CREW.concat(id), c.getReleaseDate()))
                             .forEach(results::add);
                 }

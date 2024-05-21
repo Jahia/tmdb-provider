@@ -254,6 +254,43 @@ public class TMDBDataSourceTest {
         }
     }
 
+    @Test
+    public void testSearchCredits() throws RepositoryException {
+        ExternalQuery query = Mockito.mock(ExternalQuery.class);
+        Mockito.when(query.getLimit()).thenReturn(50l);
+        Mockito.when(query.getOffset()).thenReturn(0l);
+
+        try (MockedStatic<QueryHelper> helper = Mockito.mockStatic(QueryHelper.class)) {
+            helper.when(() -> QueryHelper.getNodeType(Mockito.any())).thenReturn(Naming.NodeType.CREW);
+            Map<String, Value> map = new HashMap<>();
+            Value matrixTitleValue = Mockito.mock(Value.class);
+            Mockito.when(matrixTitleValue.getString()).thenReturn("976");
+            map.put("id", matrixTitleValue);
+            helper.when(() -> QueryHelper.getSimpleOrConstraints(Mockito.any())).thenReturn(map);
+
+            List<String> results = tmdbDataSource.search(query);
+            assertFalse(results.isEmpty());
+            assertTrue(results.contains("/movies/2024/2024-01/866398/crew_976"));
+            LOGGER.info("Search credits for crew with id 603: " + results.size());
+        }
+
+        try (MockedStatic<QueryHelper> helper = Mockito.mockStatic(QueryHelper.class)) {
+            helper.when(() -> QueryHelper.getNodeType(Mockito.any())).thenReturn(Naming.NodeType.CAST);
+            Map<String, Value> map = new HashMap<>();
+            Value matrixTitleValue = Mockito.mock(Value.class);
+            Mockito.when(matrixTitleValue.getString()).thenReturn("976");
+            map.put("id", matrixTitleValue);
+            helper.when(() -> QueryHelper.getSimpleOrConstraints(Mockito.any())).thenReturn(map);
+
+            List<String> results = tmdbDataSource.search(query);
+            assertFalse(results.isEmpty());
+            assertTrue(results.contains("/movies/2024/2024-01/866398/cast_976"));
+            LOGGER.info("Search credits for cast with id 603: " + results.size());
+        }
+    }
+
+
+
     class TestConfig implements TMDBDataSource.Config {
 
         @Override public String apiKey() {

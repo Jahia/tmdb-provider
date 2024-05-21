@@ -21,7 +21,7 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item;
+package org.jahia.modules.provider.tmdb.item.mapper;
 
 import info.movito.themoviedbapi.model.people.PersonDb;
 import info.movito.themoviedbapi.tools.TmdbException;
@@ -31,6 +31,8 @@ import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.provider.tmdb.helper.Naming;
 import org.jahia.modules.provider.tmdb.helper.PathBuilder;
 import org.jahia.modules.provider.tmdb.helper.PathHelper;
+import org.jahia.modules.provider.tmdb.item.ItemMapper;
+import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

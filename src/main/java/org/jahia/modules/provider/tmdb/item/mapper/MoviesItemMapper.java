@@ -21,40 +21,48 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item;
+package org.jahia.modules.provider.tmdb.item.mapper;
 
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.provider.tmdb.helper.Naming;
+import org.jahia.modules.provider.tmdb.helper.PathBuilder;
+import org.jahia.modules.provider.tmdb.item.ItemMapper;
+import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
- * Handler for error in the provider node browsing.
+ * Handler for movies node.
+ * List of years for movies.
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/error$", idPattern = "^error$", supportedNodeType = {}, hasLazyProperties = false)
-public class ErrorItemMapper extends ItemMapper {
+@ItemMapperDescriptor(pathPattern = "^/movies$", idPattern = "^movies$", supportedNodeType = {Naming.NodeType.CONTENT_FOLDER},
+        hasLazyProperties = false)
+public class MoviesItemMapper extends ItemMapper {
+    public static final String PATH_LABEL = "movies";
+    public static final String ID_PREFIX = "movies";
 
-    public static final String PATH_LABEL = "error";
-    public static final String ID_PREFIX = "";
+    private static final List<String> CHILDREN = IntStream.rangeClosed(1900, Calendar.getInstance().get(Calendar.YEAR))
+            .boxed().sorted(Collections.reverseOrder())
+            .map(i -> Integer.toString(i))
+            .collect(Collectors.toList());
 
-
-    public ErrorItemMapper() {
+    public MoviesItemMapper() {
     }
 
     @Override public List<String> listChildren(String path) {
-        return Collections.emptyList();
+        return CHILDREN;
     }
 
     @Override public ExternalData getData(String identifier) {
         Map<String, String[]> properties = new HashMap<>();
         properties.put(Constants.JCR_TITLE, new String[] { PATH_LABEL });
-        return new ExternalData(identifier, "", Naming.NodeType.CONTENT_FOLDER, properties);
+        String path = new PathBuilder(PATH_LABEL).build();
+        return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
     }
 
     @Override public String getIdFromPath(String path) {

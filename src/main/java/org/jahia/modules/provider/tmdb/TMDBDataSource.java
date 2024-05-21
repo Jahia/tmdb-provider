@@ -30,6 +30,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+//TODO Many movies have no releaseDate so mapping using date in path is not the good one. Prefer a base path mapping using only movie id and
+// use the date only for search and redirection. TO avoid URL overlap in pattern either use a mid segment /movies/id/123 and
+// /movies/date/1999-03  or always use a month in the date segment (there is no - in movie id)
+
 @Component(service = { ExternalDataSource.class, TMDBDataSource.class }, immediate = true, configurationPid = "org.jahia.modules"
         + ".tmdbprovider") @Designate(ocd = TMDBDataSource.Config.class)
 public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.LazyProperty, ExternalDataSource.Searchable {
@@ -70,16 +74,6 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
             LOGGER.warn("API key is not set, TMDB provider will not initialize.");
             return;
         }
-        externalContentStoreProvider = externalContentStoreProviderFactory.newProvider();
-        externalContentStoreProvider.setDataSource(this);
-        externalContentStoreProvider.setExtendableTypes(EXTENDABLE_TYPES);
-        externalContentStoreProvider.setMountPoint(config.mountPoint());
-        externalContentStoreProvider.setKey("TMDBProvider");
-        try {
-            externalContentStoreProvider.start();
-        } catch (JahiaInitializationException e) {
-            throw new RepositoryException("Error initializing TMDB Provider", e);
-        }
 
         try {
             if (!cacheProvider.getCacheManager().cacheExists(Naming.Cache.TMDB_CACHE)) {
@@ -91,8 +85,18 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         }
 
         apiClient = new TmdbApi(new TmdbApacheHttpClient(config.apiKey()));
-
         mapperProvider = ItemMapperProvider.getInstance().initialize(cache, apiClient);
+
+        externalContentStoreProvider = externalContentStoreProviderFactory.newProvider();
+        externalContentStoreProvider.setDataSource(this);
+        externalContentStoreProvider.setExtendableTypes(EXTENDABLE_TYPES);
+        externalContentStoreProvider.setMountPoint(config.mountPoint());
+        externalContentStoreProvider.setKey("TMDBProvider");
+        try {
+            externalContentStoreProvider.start();
+        } catch (JahiaInitializationException e) {
+            throw new RepositoryException("Error initializing TMDB Provider", e);
+        }
     }
 
     @Deactivate

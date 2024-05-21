@@ -21,35 +21,31 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item;
+package org.jahia.modules.provider.tmdb.item.mapper;
 
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.provider.tmdb.helper.Naming;
 import org.jahia.modules.provider.tmdb.helper.PathBuilder;
+import org.jahia.modules.provider.tmdb.item.ItemMapper;
+import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
 
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
- * Handler for movies node.
- * List of years for movies.
+ * Handler for root node of the provider.
+ * List predefined children based on root collections exposed
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies$", idPattern = "^movies$", supportedNodeType = {Naming.NodeType.CONTENT_FOLDER},
+@ItemMapperDescriptor(pathPattern = "^/$", idPattern = "^root$", supportedNodeType = {Naming.NodeType.CONTENT_FOLDER},
         hasLazyProperties = false)
-public class MoviesItemMapper extends ItemMapper {
-    public static final String PATH_LABEL = "movies";
-    public static final String ID_PREFIX = "movies";
+public class RootItemMapper extends ItemMapper {
 
-    private static final List<String> CHILDREN = IntStream.rangeClosed(1900, Calendar.getInstance().get(Calendar.YEAR))
-            .boxed().sorted(Collections.reverseOrder())
-            .map(i -> Integer.toString(i))
-            .collect(Collectors.toList());
+    private static final List<String> CHILDREN = Arrays.asList(MoviesItemMapper.PATH_LABEL, PersonsItemMapper.PATH_LABEL);
+    public static final String ID_PREFIX = "root";
 
-    public MoviesItemMapper() {
+    public RootItemMapper() {
     }
 
     @Override public List<String> listChildren(String path) {
@@ -58,8 +54,8 @@ public class MoviesItemMapper extends ItemMapper {
 
     @Override public ExternalData getData(String identifier) {
         Map<String, String[]> properties = new HashMap<>();
-        properties.put(Constants.JCR_TITLE, new String[] { PATH_LABEL });
-        String path = new PathBuilder(PATH_LABEL).build();
+        properties.put(Constants.JCR_TITLE, new String[] { "TMDB" });
+        String path = new PathBuilder().build();
         return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
     }
 
@@ -68,6 +64,6 @@ public class MoviesItemMapper extends ItemMapper {
     }
 
     @Override public String getPathLabel() {
-        return PATH_LABEL;
+        return "";
     }
 }

@@ -21,7 +21,7 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item;
+package org.jahia.modules.provider.tmdb.item.mapper;
 
 import info.movito.themoviedbapi.model.core.MovieResultsPage;
 import info.movito.themoviedbapi.model.movies.Credits;
@@ -32,7 +32,6 @@ import info.movito.themoviedbapi.tools.builders.discover.DiscoverMovieParamBuild
 import info.movito.themoviedbapi.tools.sortby.DiscoverMovieSortBy;
 import net.sf.ehcache.Element;
 import org.apache.commons.lang.StringUtils;
-import org.apache.groovy.util.Maps;
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.external.ExternalQuery;
@@ -41,6 +40,8 @@ import org.jahia.modules.external.query.QueryHelper;
 import org.jahia.modules.provider.tmdb.helper.Naming;
 import org.jahia.modules.provider.tmdb.helper.PathBuilder;
 import org.jahia.modules.provider.tmdb.helper.PathHelper;
+import org.jahia.modules.provider.tmdb.item.ItemMapper;
+import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
 import org.jahia.osgi.BundleUtils;
 import org.jahia.services.content.JCRSessionFactory;
 import org.jahia.services.content.JCRStoreProvider;
@@ -125,7 +126,7 @@ public class MovieItemMapper extends ItemMapper {
                 String path = buildMoviePath(mid, movie.getReleaseDate());
                 ExternalData data = new ExternalData(identifier, path, Naming.NodeType.MOVIE, properties);
                 data.setLazyProperties(new HashSet<>(LAZY_PROPERTIES));
-                data.setLazyI18nProperties(Maps.of("en", new HashSet<>(LAZY_I18N_PROPERTIES), "fr", new HashSet<>(LAZY_I18N_PROPERTIES)));
+                data.setLazyI18nProperties(Map.of("en", new HashSet<>(LAZY_I18N_PROPERTIES), "fr", new HashSet<>(LAZY_I18N_PROPERTIES)));
                 this.notify(mid, data);
                 getCache().put(new Element(Naming.Cache.MOVIE_CACHE_PREFIX + mid, data));
                 return data;

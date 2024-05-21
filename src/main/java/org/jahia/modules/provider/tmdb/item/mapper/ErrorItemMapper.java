@@ -21,15 +21,13 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item;
+package org.jahia.modules.provider.tmdb.item.mapper;
 
-import org.apache.commons.lang.StringUtils;
+import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.helper.PathBuilder;
-import org.jahia.modules.provider.tmdb.helper.PathHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jahia.modules.provider.tmdb.item.ItemMapper;
+import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,19 +35,18 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Short description of the class
+ * Handler for error in the provider node browsing.
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/lists/[a-z0-9]+/\\d+$", idPattern = "^mref-[a-z0-9]+\\d+$", supportedNodeType =
-        {Naming.NodeType.CONTENT_REFERENCE}, hasLazyProperties = false)
-public class MovieReferenceItemMapper extends ItemMapper {
+@ItemMapperDescriptor(pathPattern = "^/error$", idPattern = "^error$", supportedNodeType = {}, hasLazyProperties = false)
+public class ErrorItemMapper extends ItemMapper {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MovieReferenceItemMapper.class);
-    public static final String PATH_LABEL = "lists";
-    public static final String ID_PREFIX = "mref-";
+    public static final String PATH_LABEL = "error";
+    public static final String ID_PREFIX = "";
 
-    public MovieReferenceItemMapper() {
+
+    public ErrorItemMapper() {
     }
 
     @Override public List<String> listChildren(String path) {
@@ -57,17 +54,13 @@ public class MovieReferenceItemMapper extends ItemMapper {
     }
 
     @Override public ExternalData getData(String identifier) {
-        String cleanId = StringUtils.substring(identifier, ID_PREFIX.length());
-        String listId = StringUtils.substringBefore(cleanId, "-");
-        int movieId = Integer.parseInt(StringUtils.substringAfter(cleanId, "-"));
         Map<String, String[]> properties = new HashMap<>();
-        properties.put("j:node", new String[] { MovieItemMapper.ID_PREFIX + movieId });
-        String path = new PathBuilder(PATH_LABEL).append(listId).append(movieId).build();
-        return new ExternalData(identifier, path, Naming.NodeType.CONTENT_REFERENCE, properties);
+        properties.put(Constants.JCR_TITLE, new String[] { PATH_LABEL });
+        return new ExternalData(identifier, "", Naming.NodeType.CONTENT_FOLDER, properties);
     }
 
     @Override public String getIdFromPath(String path) {
-        return ID_PREFIX.concat(PathHelper.getLeaf(path));
+        return ID_PREFIX;
     }
 
     @Override public String getPathLabel() {
