@@ -71,16 +71,15 @@ public class MovieCreditsItemMapper extends ItemMapper {
         String creditsId = StringUtils.substringAfter(cleanId, "-");
         String movieId = StringUtils.substringBefore(cleanId, "-");
 
-        if (getCache().get(Naming.Cache.MOVIE_CREDITS_CACHE_PREFIX + movieId) != null) {
-            return (ExternalData) getCache().get(Naming.Cache.MOVIE_CREDITS_CACHE_PREFIX + movieId).getObjectValue();
+        if (getCache().get(Naming.Cache.MOVIE_CREDITS_CACHE_PREFIX + identifier) != null) {
+            return (ExternalData) getCache().get(Naming.Cache.MOVIE_CREDITS_CACHE_PREFIX + identifier).getObjectValue();
         } else {
             try {
-                MovieDb movie = getApiClient().getMovies().getDetails(Integer.parseInt(movieId), "en-US");
-                Credits credits = getApiClient().getMovies().getCredits(Integer.parseInt(movieId), "en-US");
-                String year = StringUtils.substringBefore(movie.getReleaseDate(), "-");
-                String date = StringUtils.substringBeforeLast(movie.getReleaseDate(), "-");
-                String path = new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year)
-                        .append(date).append(movieId).append(creditsId).build();
+                MovieDb movie = getApiClient().getMovies().getDetails(Integer.parseInt(movieId), "en");
+                Credits credits = getApiClient().getMovies().getCredits(Integer.parseInt(movieId), "en");
+                String year = movie.getReleaseDate().split("-")[0];
+                String month = movie.getReleaseDate().split("-")[1];
+                String path = new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(month).append(movieId).append(creditsId).build();
                 String baseUrl = getConfiguration().getImageConfig().getBaseUrl();
                 if (creditsId.startsWith(CREW)) {
                     String pid = creditsId.substring(CREW.length());
@@ -101,7 +100,7 @@ public class MovieCreditsItemMapper extends ItemMapper {
                         properties.put("profile", new String[] {
                                 baseUrl + getConfiguration().getImageConfig().getProfileSizes().get(1) + crew.getProfilePath() });
                     }
-                    getCache().put(new Element(Naming.Cache.MOVIE_CREDITS_CACHE_PREFIX + movieId, data));
+                    getCache().put(new Element(Naming.Cache.MOVIE_CREDITS_CACHE_PREFIX + identifier, data));
                     return data;
                 }
                 if (creditsId.startsWith(CAST)) {
@@ -122,7 +121,7 @@ public class MovieCreditsItemMapper extends ItemMapper {
                         properties.put("profile", new String[] {
                                 baseUrl + getConfiguration().getImageConfig().getProfileSizes().get(1) + cast.getProfilePath() });
                     }
-                    getCache().put(new Element(Naming.Cache.MOVIE_CREDITS_CACHE_PREFIX + movieId, data));
+                    getCache().put(new Element(Naming.Cache.MOVIE_CREDITS_CACHE_PREFIX + identifier, data));
                     return data;
                 }
                 return null;

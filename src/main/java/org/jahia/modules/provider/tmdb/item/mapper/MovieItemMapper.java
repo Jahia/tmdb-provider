@@ -60,7 +60,7 @@ import java.util.stream.Collectors;
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{2}/\\d+$", idPattern = "^movie-\\d+", supportedNodeType =
+@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{2}/\\d+(?:/j:translation_[a-z]{2})?$", idPattern = "^movie-\\d+", supportedNodeType =
         {Naming.NodeType.MOVIE}, hasLazyProperties = true)
 public class MovieItemMapper extends ItemMapper {
 
@@ -77,6 +77,9 @@ public class MovieItemMapper extends ItemMapper {
 
     @Override public List<String> listChildren(String path) {
         String movieId = PathHelper.getLeaf(path);
+        if (movieId.startsWith("j:translation_")) {
+            return Collections.emptyList();
+        }
         String cacheKey = Naming.Cache.MOVIE_CREDITS_LIST_CACHE_PREFIX + movieId;
         if (getCache().get(cacheKey) != null) {
             return (List<String>) getCache().get(cacheKey).getObjectValue();
