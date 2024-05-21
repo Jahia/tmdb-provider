@@ -46,30 +46,30 @@ import java.util.stream.Collectors;
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{4}-\\d{2}$", idPattern = "^mmonth-\\d{4}-\\d{2}$", supportedNodeType =
+@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{2}$", idPattern = "^movies-\\d{4}-\\d{2}$", supportedNodeType =
         {Naming.NodeType.CONTENT_FOLDER}, hasLazyProperties = false)
 public class MovieMonthItemMapper extends ItemMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MovieMonthItemMapper.class);
-    public static final String ID_PREFIX = "mmonth-";
-
+    public static final String ID_PREFIX = "movies-";
     public MovieMonthItemMapper() {
     }
 
     @Override public List<String> listChildren(String path) {
-        String node = PathHelper.getLeaf(path);
-        //TODO Maybe the cache name is not the same than for the cache key prefix
-        if (getCache().get(Naming.Cache.MOVIES_FOLDER_CACHE_PREFIX + node) != null) {
-            return (List<String>) getCache().get(Naming.Cache.MOVIES_FOLDER_CACHE_PREFIX + node).getObjectValue();
+        String year = PathHelper.getParent(path);
+        String month = PathHelper.getLeaf(path);
+        String cacheKey = Naming.Cache.MOVIES_LIST_CACHE_PREFIX + year + month;
+        if (getCache().get(cacheKey) != null) {
+            return (List<String>) getCache().get(cacheKey).getObjectValue();
         } else {
             Calendar instance = Calendar.getInstance();
-            instance.set(Calendar.YEAR, Integer.parseInt(node.split("-")[0]));
-            instance.set(Calendar.MONTH, Integer.parseInt(node.split("-")[1]));
+            instance.set(Calendar.YEAR, Integer.parseInt(year));
+            instance.set(Calendar.MONTH, Integer.parseInt(month));
             instance.set(Calendar.DAY_OF_MONTH, 1);
             instance.roll(Calendar.DAY_OF_MONTH, false);
             DiscoverMovieParamBuilder builder = new DiscoverMovieParamBuilder()
-                    .primaryReleaseDateGte(node.concat("-01"))
-                    .primaryReleaseDateLte(node.concat("-").concat(Integer.toString(instance.get(Calendar.DAY_OF_MONTH))))
+                    .primaryReleaseDateGte(year.concat("-").concat(month).concat("-01"))
+                    .primaryReleaseDateLte(year.concat("-").concat(month).concat("-").concat(Integer.toString(instance.get(Calendar.DAY_OF_MONTH))))
                     .page(1);
             List<String> children = new ArrayList<>();
             try {
@@ -80,11 +80,11 @@ public class MovieMonthItemMapper extends ItemMapper {
                             .map(m -> Integer.toString(m.getId()))
                             .collect(Collectors.toList()));
                     builder.page(page.getPage() + 1);
-                } while (page.getPage() < page.getTotalPages());
+                } while (page.getPage() < page.getTotalPages() && children.size() < 40);
             } catch (Exception e) {
                 LOGGER.warn("Error while getting movies ", e);
             }
-            getCache().put(new Element(Naming.Cache.MOVIES_FOLDER_CACHE_PREFIX + node, children));
+            getCache().put(new Element(cacheKey, children));
             return children;
         }
     }
@@ -92,14 +92,15 @@ public class MovieMonthItemMapper extends ItemMapper {
     @Override public ExternalData getData(String identifier) {
         final String date = StringUtils.substring(identifier, ID_PREFIX.length());
         final String year = date.split("-")[0];
+        final String month = date.split("-")[1];
         Map<String, String[]> properties = new HashMap<>();
         properties.put(Constants.JCR_TITLE, new String[] { date });
-        String path = new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(date).build();
+        String path = new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(month).build();
         return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
     }
 
     @Override public String getIdFromPath(String path) {
-        return ID_PREFIX.concat(PathHelper.getLeaf(path));
+        return ID_PREFIX.concat(PathHelper.getParent(path)).concat("-").concat(PathHelper.getLeaf(path));
     }
 
     @Override public String getPathLabel() {

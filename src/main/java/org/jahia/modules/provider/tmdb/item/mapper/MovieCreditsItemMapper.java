@@ -49,7 +49,7 @@ import java.util.*;
 /**
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{4}-\\d{2}/\\d+/(cast_|crew_)\\d+$", idPattern = "^mcredits-\\d+-(cast_|crew_)\\d+$",
+@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{2}/\\d+/(cast_|crew_)\\d+$", idPattern = "^mcredits-\\d+-(cast_|crew_)\\d+$",
         supportedNodeType = {Naming.NodeType.CREW, Naming.NodeType.CAST}, hasLazyProperties = false)
 public class MovieCreditsItemMapper extends ItemMapper {
 

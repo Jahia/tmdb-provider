@@ -60,13 +60,13 @@ import java.util.stream.Collectors;
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{4}-\\d{2}/\\d+$", idPattern = "^mid-\\d+", supportedNodeType =
+@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{2}/\\d+$", idPattern = "^movie-\\d+", supportedNodeType =
         {Naming.NodeType.MOVIE}, hasLazyProperties = true)
 public class MovieItemMapper extends ItemMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MovieItemMapper.class);
     public static final String PATH_LABEL = "movie";
-    public static final String ID_PREFIX = "mid-";
+    public static final String ID_PREFIX = "movie-";
     public static final String CAST = "cast_";
     public static final String CREW = "crew_";
     private static final Set<String> LAZY_PROPERTIES = Set.of("original_title", "homepage", "status", "runtime", "imdb_id", "budget", "revenue");
@@ -76,20 +76,21 @@ public class MovieItemMapper extends ItemMapper {
     }
 
     @Override public List<String> listChildren(String path) {
-        String node = PathHelper.getLeaf(path);
-        if (getCache().get(Naming.Cache.MOVIE_CREDITS_LIST_CACHE_PREFIX + node) != null) {
-            return (List<String>) getCache().get(Naming.Cache.MOVIE_CREDITS_LIST_CACHE_PREFIX + node).getObjectValue();
+        String movieId = PathHelper.getLeaf(path);
+        String cacheKey = Naming.Cache.MOVIE_CREDITS_LIST_CACHE_PREFIX + movieId;
+        if (getCache().get(cacheKey) != null) {
+            return (List<String>) getCache().get(cacheKey).getObjectValue();
         } else {
             List<String> children = new ArrayList<>();
             try {
-                Credits credits = getApiClient().getMovies().getCredits(Integer.parseInt(node), "en-US");
+                Credits credits = getApiClient().getMovies().getCredits(Integer.parseInt(movieId), "en");
                 children.addAll(credits.getCast().stream()
                         .map(c -> CAST.concat(Integer.toString(c.getId())))
                         .collect(Collectors.toList()));
                 children.addAll(credits.getCrew().stream()
                         .map(c -> CREW.concat(Integer.toString(c.getId())))
                         .collect(Collectors.toList()));
-                getCache().put(new Element(Naming.Cache.MOVIE_CREDITS_LIST_CACHE_PREFIX + node, children));
+                getCache().put(new Element(cacheKey, children));
             } catch (Exception e) {
                 LOGGER.warn("Error while getting movie credits", e);
             }
@@ -99,11 +100,12 @@ public class MovieItemMapper extends ItemMapper {
 
     @Override public ExternalData getData(String identifier) {
         String mid = identifier.substring(ID_PREFIX.length());
-        if (getCache().get(Naming.Cache.MOVIE_CACHE_PREFIX + mid) != null) {
-            return (ExternalData) getCache().get(Naming.Cache.MOVIE_CACHE_PREFIX + mid).getObjectValue();
+        String cacheKey = Naming.Cache.MOVIE_CACHE_PREFIX + mid;
+        if (getCache().get(cacheKey) != null) {
+            return (ExternalData) getCache().get(cacheKey).getObjectValue();
         } else {
             try {
-                MovieDb movie = getApiClient().getMovies().getDetails(Integer.parseInt(mid), "en-US", MovieAppendToResponse.KEYWORDS);
+                MovieDb movie = getApiClient().getMovies().getDetails(Integer.parseInt(mid), "en", MovieAppendToResponse.KEYWORDS);
                 String baseUrl = getConfiguration().getImageConfig().getBaseUrl();
                 Map<String, String[]> properties = new HashMap<>();
                 if (StringUtils.isNotEmpty(movie.getBackdropPath())) {
@@ -128,7 +130,7 @@ public class MovieItemMapper extends ItemMapper {
                 data.setLazyProperties(new HashSet<>(LAZY_PROPERTIES));
                 data.setLazyI18nProperties(Map.of("en", new HashSet<>(LAZY_I18N_PROPERTIES), "fr", new HashSet<>(LAZY_I18N_PROPERTIES)));
                 this.notify(mid, data);
-                getCache().put(new Element(Naming.Cache.MOVIE_CACHE_PREFIX + mid, data));
+                getCache().put(new Element(cacheKey, data));
                 return data;
             } catch (TmdbException e) {
                 LOGGER.warn("Error while getting movie data", e);
@@ -169,7 +171,7 @@ public class MovieItemMapper extends ItemMapper {
                     results.addAll(page.getResults().stream().filter(movie -> StringUtils.isNotEmpty(movie.getReleaseDate()))
                             .map(movie -> buildMoviePath(Integer.toString(movie.getId()), movie.getReleaseDate())).collect(Collectors.toList()));
                     builder.page(page.getPage() + 1);
-                } while (page.getPage() < page.getTotalPages() && results.size() < query.getLimit() && results.size() < 500);
+                } while (page.getPage() < page.getTotalPages() && results.size() < query.getLimit() && results.size() < 100);
             }
         } catch (TmdbException e) {
             throw new RepositoryException("Error while searching movie", e);
@@ -177,34 +179,45 @@ public class MovieItemMapper extends ItemMapper {
         return results;
     }
 
-    @Override public String[] getProperty(String mid, String lang, String propertyName) {
+    @Override public String[] getProperty(String identifier, String lang, String propertyName) {
         MovieDb movie;
+        String mid = identifier.substring(ID_PREFIX.length());
+        String cacheKey = Naming.Cache.MOVIE_FULL_CACHE_PREFIX + lang + "-" + mid;
+        Map<String, String[]> properties = new HashMap<>();
         try {
-            if (getCache().get(Naming.Cache.MOVIE_API_CACHE_PREFIX + lang + "-" + mid) != null) {
-                movie = (MovieDb) getCache().get(Naming.Cache.MOVIE_API_CACHE_PREFIX + lang + "-" + mid).getObjectValue();
+            if (getCache().get(cacheKey) != null) {
+                properties = (Map<String, String[]>) getCache().get(cacheKey).getObjectValue();
+            }
+            if (properties.containsKey(propertyName)) {
+                return properties.get(propertyName);
             } else {
                 movie = getApiClient().getMovies().getDetails(Integer.parseInt(mid), lang, MovieAppendToResponse.KEYWORDS);
-                getCache().put(new Element(Naming.Cache.MOVIE_API_CACHE_PREFIX + lang + "-" + mid, movie.toString()));
-            }
-            if (propertyName.equals(Constants.JCR_TITLE) && StringUtils.isNotEmpty(movie.getTitle()) && !movie.getTitle().equals("null")) {
-                return new String[] { movie.getTitle() };
-            } else if (propertyName.equals(Naming.Property.POSTER_PATH) && StringUtils.isNotEmpty(movie.getPosterPath())
-                    && !movie.getPosterPath().equals("null")) {
-                String baseUrl = getConfiguration().getImageConfig().getBaseUrl();
-                return new String[] {
-                        baseUrl + getConfiguration().getImageConfig().getPosterSizes().get(1) + movie.getPosterPath() };
-            } else if (propertyName.equals("runtime")) {
-                return new String[] { "0" };
-            } else {
-                try {
-                    String methodName = "get" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
-                    Method method = MovieDb.class.getMethod(methodName);
-                    String value = (String) method.invoke(movie);
-                    if (StringUtils.isNotEmpty(value) && !value.equals("null")) {
-                        return new String[] { value };
+                String[] result = null;
+                if (propertyName.equals(Constants.JCR_TITLE) && StringUtils.isNotEmpty(movie.getTitle()) && !movie.getTitle()
+                        .equals("null")) {
+                    result = new String[] { movie.getTitle() };
+                } else if (propertyName.equals(Naming.Property.POSTER_PATH) && StringUtils.isNotEmpty(movie.getPosterPath())
+                        && !movie.getPosterPath().equals("null")) {
+                    String baseUrl = getConfiguration().getImageConfig().getBaseUrl();
+                    result = new String[] { baseUrl + getConfiguration().getImageConfig().getPosterSizes().get(1) + movie.getPosterPath() };
+                } else if (propertyName.equals("runtime")) {
+                    result = new String[] { "0" };
+                } else {
+                    try {
+                        String methodName = "get" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
+                        Method method = MovieDb.class.getMethod(methodName);
+                        Object value = method.invoke(movie);
+                        if (value != null && !String.valueOf(value).equals("null")) {
+                            result = new String[] { String.valueOf(value) };
+                        }
+                    } catch (Exception e) {
+                        LOGGER.debug("Unable to access movie property: " + propertyName, e);
                     }
-                } catch (Exception e) {
-                    LOGGER.debug("Unable to access movie property: " + propertyName, e);
+                }
+                if (result != null) {
+                    properties.put(propertyName, result);
+                    getCache().put(new Element(cacheKey, properties));
+                    return result;
                 }
             }
         } catch (TmdbException e) {
@@ -214,13 +227,14 @@ public class MovieItemMapper extends ItemMapper {
     }
 
     private void notify(String mid, ExternalData data) {
-        if (getCache().get(Naming.Cache.INDEXED_FULL_MOVIE_CACHE_PREFIX + mid) == null) {
+        String cacheKey = Naming.Cache.INDEXED_FULL_MOVIE_CACHE_PREFIX + mid;
+        if (getCache().get(cacheKey) == null) {
             EventService eventService = BundleUtils.getOsgiService(EventService.class, null);
             JCRStoreProvider jcrStoreProvider = JCRSessionFactory.getInstance().getProviders().get("TMDBProvider");
             CompletableFuture.supplyAsync(() -> {
                 try {
                     eventService.sendAddedNodes(Arrays.asList(data), jcrStoreProvider);
-                    getCache().put(new Element(Naming.Cache.INDEXED_FULL_MOVIE_CACHE_PREFIX + mid, "indexed"));
+                    getCache().put(new Element(cacheKey, "indexed"));
                 } catch (RepositoryException e) {
                     e.printStackTrace();
                 }
@@ -230,8 +244,8 @@ public class MovieItemMapper extends ItemMapper {
     }
 
     private String buildMoviePath(String mid, String releaseDate) {
-        String year = StringUtils.substringBefore(releaseDate, "-");
-        String date = StringUtils.substringBeforeLast(releaseDate, "-");
-        return new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(date).append(mid).build();
+        String year = releaseDate.split( "-")[0];
+        String month = releaseDate.split( "-")[1];
+        return new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(month).append(mid).build();
     }
 }

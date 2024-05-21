@@ -42,23 +42,30 @@ import java.util.stream.IntStream;
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}$", idPattern = "^myear-\\d{4}$", supportedNodeType =
+@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}$", idPattern = "^movies-\\d{4}$", supportedNodeType =
         {Naming.NodeType.CONTENT_FOLDER}, hasLazyProperties = false)
 public class MovieYearItemMapper extends ItemMapper {
-    public static final String ID_PREFIX = "myear-";
+    public static final String ID_PREFIX = "movies-";
+    private static final List<String> CHILDREN = IntStream.rangeClosed(1, 12)
+            .mapToObj(i -> StringUtils.leftPad(Integer.toString(i), 2, "0"))
+            .collect(Collectors.toList());
 
     public MovieYearItemMapper() {
     }
 
+    //Children of the /movies/{year} node are the months we want to display in browsing, current year is limited to current month
     @Override public List<String> listChildren(String path) {
         String node = PathHelper.getLeaf(path);
         if (node != null) {
             Calendar calendar = Calendar.getInstance();
-            int limit = (node.equals(Integer.toString(calendar.get(Calendar.YEAR)))) ? calendar.get(Calendar.MONTH) : 12;
-            return IntStream.rangeClosed(1, limit)
-                    .boxed().sorted(Collections.reverseOrder())
-                    .map(i -> node.concat("-").concat(StringUtils.leftPad(Integer.toString(i), 2, "0")))
-                    .collect(Collectors.toList());
+            if (calendar.get(Calendar.YEAR) == Integer.parseInt(node)) {
+                int limit = calendar.get(Calendar.MONTH);
+                return IntStream.rangeClosed(1, limit)
+                        .mapToObj(i -> StringUtils.leftPad(Integer.toString(i), 2, "0"))
+                        .collect(Collectors.toList());
+            } else {
+                return CHILDREN;
+            }
         }
         return Collections.emptyList();
     }

@@ -45,13 +45,13 @@ public class Naming {
 
     public static class Cache {
         public static final String TMDB_CACHE = "tmdb-cache";
-        public static final String INDEXED_FULL_MOVIE_CACHE_PREFIX = "indexed-full-movie-";
+        public static final String MOVIES_LIST_CACHE_PREFIX = "movies-list-";
         public static final String MOVIE_CREDITS_LIST_CACHE_PREFIX = "movie-credits-list-";
+        public static final String INDEXED_FULL_MOVIE_CACHE_PREFIX = "indexed-full-movie-";
         public static final String MOVIE_CREDITS_CACHE_PREFIX = "movie-credits-";
         public static final String MOVIE_CREDITS_QUERY_CACHE_KEY_PREFIX = "movie_credits_query_";
         public static final String MOVIE_CACHE_PREFIX = "movie-";
-        public static final String MOVIE_API_CACHE_PREFIX = "movie-api-";
-        public static final String MOVIES_FOLDER_CACHE_PREFIX = "movies-date-";
+        public static final String MOVIE_FULL_CACHE_PREFIX = "movie-full-";
         public static final String CONFIGURATION_CACHE_KEY = "configuration";
     }
 

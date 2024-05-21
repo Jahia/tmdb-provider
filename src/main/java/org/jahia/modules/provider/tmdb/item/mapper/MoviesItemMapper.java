@@ -46,9 +46,10 @@ public class MoviesItemMapper extends ItemMapper {
     public static final String PATH_LABEL = "movies";
     public static final String ID_PREFIX = "movies";
 
-    private static final List<String> CHILDREN = IntStream.rangeClosed(1900, Calendar.getInstance().get(Calendar.YEAR))
-            .boxed().sorted(Collections.reverseOrder())
-            .map(i -> Integer.toString(i))
+    //Children of the /movies node are the years we want to display in browsing (5 last years)
+    private static final List<String> CHILDREN = IntStream
+            .rangeClosed(Calendar.getInstance().get(Calendar.YEAR) - 10, Calendar.getInstance().get(Calendar.YEAR))
+            .mapToObj(Integer::toString)
             .collect(Collectors.toList());
 
     public MoviesItemMapper() {

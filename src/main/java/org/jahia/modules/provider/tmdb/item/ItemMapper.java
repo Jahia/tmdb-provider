@@ -46,6 +46,7 @@ import java.util.List;
 public abstract class ItemMapper {
     private TmdbApi client;
     private Cache cache;
+    private Configuration configuration;
 
     public ItemMapper withApiClient(TmdbApi client) {
         this.client = client;
@@ -81,13 +82,9 @@ public abstract class ItemMapper {
         return new String[] {};
     }
 
-    public Configuration getConfiguration() throws TmdbException {
-        Configuration configuration;
-        if (getCache().get(Naming.Cache.CONFIGURATION_CACHE_KEY) != null) {
-            configuration = (Configuration) getCache().get(Naming.Cache.CONFIGURATION_CACHE_KEY).getObjectValue();
-        } else {
+    public synchronized Configuration getConfiguration() throws TmdbException {
+        if ( configuration == null ) {
             configuration = getApiClient().getConfiguration().getDetails();
-            getCache().put(new Element(Naming.Cache.CONFIGURATION_CACHE_KEY, configuration));
         }
         return configuration;
     }
