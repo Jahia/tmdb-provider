@@ -101,32 +101,32 @@ public class TMDBDataSourceTest {
 
         ExternalData yearfolder = tmdbDataSource.getItemByPath("/movies/1999");
         assertNotNull(yearfolder);
-        assertEquals("myear-1999", yearfolder.getId());
+        assertEquals("movies-1999", yearfolder.getId());
         assertEquals("/movies/1999", yearfolder.getPath());
         assertEquals(Naming.NodeType.CONTENT_FOLDER, yearfolder.getType());
 
-        ExternalData monthfolder = tmdbDataSource.getItemByPath("/movies/1999/1999-03");
+        ExternalData monthfolder = tmdbDataSource.getItemByPath("/movies/1999/03");
         assertNotNull(monthfolder);
-        assertEquals("mmonth-1999-03", monthfolder.getId());
-        assertEquals("/movies/1999/1999-03", monthfolder.getPath());
+        assertEquals("movies-1999-03", monthfolder.getId());
+        assertEquals("/movies/1999/03", monthfolder.getPath());
         assertEquals(Naming.NodeType.CONTENT_FOLDER, monthfolder.getType());
 
-        ExternalData movie = tmdbDataSource.getItemByPath("/movies/1999/1999-03/603");
+        ExternalData movie = tmdbDataSource.getItemByPath("/movies/1999/03/603");
         assertNotNull(movie);
-        assertEquals("mid-603", movie.getId());
-        assertEquals("/movies/1999/1999-03/603", movie.getPath());
+        assertEquals("movie-603", movie.getId());
+        assertEquals("/movies/1999/03/603", movie.getPath());
         assertEquals(Naming.NodeType.MOVIE, movie.getType());
 
-        ExternalData keanu = tmdbDataSource.getItemByPath("/movies/1999/1999-03/603/cast_6384");
+        ExternalData keanu = tmdbDataSource.getItemByPath("/movies/1999/03/603/cast_6384");
         assertNotNull(keanu);
-        assertEquals("mcredits-603-cast_6384", keanu.getId());
-        assertEquals("/movies/1999/1999-03/603/cast_6384", keanu.getPath());
+        assertEquals("credits-603-cast_6384", keanu.getId());
+        assertEquals("/movies/1999/03/603/cast_6384", keanu.getPath());
         assertEquals(Naming.NodeType.CAST, keanu.getType());
 
-        ExternalData joel = tmdbDataSource.getItemByPath("/movies/1999/1999-03/603/crew_1091");
+        ExternalData joel = tmdbDataSource.getItemByPath("/movies/1999/03/603/crew_1091");
         assertNotNull(joel);
-        assertEquals("mcredits-603-crew_1091", joel.getId());
-        assertEquals("/movies/1999/1999-03/603/crew_1091", joel.getPath());
+        assertEquals("credits-603-crew_1091", joel.getId());
+        assertEquals("/movies/1999/03/603/crew_1091", joel.getPath());
         assertEquals(Naming.NodeType.CREW, joel.getType());
     }
 
@@ -144,29 +144,29 @@ public class TMDBDataSourceTest {
 
         List<String> year2024 = tmdbDataSource.getChildren("/movies/2024");
         assertFalse(year2024.isEmpty());
-        assertTrue(year2024.contains("2024-01"));
-        assertTrue(year2024.contains("2024-02"));
+        assertTrue(year2024.contains("01"));
+        assertTrue(year2024.contains("02"));
 
-        List<String> month202401 = tmdbDataSource.getChildren("/movies/2024/2024-01");
-        LOGGER.info("GetChildren /movies/2024/2024-01: " + month202401.size());
+        List<String> month202401 = tmdbDataSource.getChildren("/movies/2024/01");
+        LOGGER.info("GetChildren /movies/2024/01: " + month202401.size());
         assertFalse(month202401.isEmpty());
-        assertTrue(month202401.contains("1247285"));
+        assertTrue(month202401.contains("866398"));
         Mockito.verify(cache, Mockito.times(1)).put(Mockito.any());
 
         //Test that it should have been in cache
         //Test a second call to check that cache is used
         //Maybe mock the cache response to check the result size
 
-        List<String> movie = tmdbDataSource.getChildren("/movies/2024/2024-01/866398");
-        LOGGER.info("GetChildren /movies/2024/2024-01/866398: " + movie.size());
+        List<String> movie = tmdbDataSource.getChildren("/movies/2024/01/866398");
+        LOGGER.info("GetChildren /movies/2024/01/866398: " + movie.size());
         assertFalse(movie.isEmpty());
         assertTrue(movie.contains("cast_976"));
         assertTrue(movie.contains("crew_72102"));
 
         //There is no more children under a cast or crew node
-        List<String> cast = tmdbDataSource.getChildren("/movies/2024/2024-01/866398/cast_976");
+        List<String> cast = tmdbDataSource.getChildren("/movies/2024/01/866398/cast_976");
         assertTrue(cast.isEmpty());
-        List<String> crew = tmdbDataSource.getChildren("/movies/2024/2024-01/866398/crew_72102");
+        List<String> crew = tmdbDataSource.getChildren("/movies/2024/01/866398/crew_72102");
         assertTrue(crew.isEmpty());
 
 
@@ -192,22 +192,22 @@ public class TMDBDataSourceTest {
         assertEquals("/movies", movies.getPath());
         assertEquals(Naming.NodeType.CONTENT_FOLDER, movies.getType());
 
-        ExternalData onemovie = tmdbDataSource.getItemByIdentifier("mid-14");
+        ExternalData onemovie = tmdbDataSource.getItemByIdentifier("movie-14");
         assertNotNull(onemovie);
-        assertEquals("mid-14", onemovie.getId());
-        assertEquals("/movies/1999/1999-09/14", onemovie.getPath());
+        assertEquals("movie-14", onemovie.getId());
+        assertEquals("/movies/1999/09/14", onemovie.getPath());
         assertEquals(Naming.NodeType.MOVIE, onemovie.getType());
 
-        ExternalData crew = tmdbDataSource.getItemByIdentifier("mcredits-866398-crew_72102");
+        ExternalData crew = tmdbDataSource.getItemByIdentifier("credits-866398-crew_72102");
         assertNotNull(crew);
-        assertEquals("mcredits-866398-crew_72102", crew.getId());
-        assertEquals("/movies/2024/2024-01/866398/crew_72102", crew.getPath());
+        assertEquals("credits-866398-crew_72102", crew.getId());
+        assertEquals("/movies/2024/01/866398/crew_72102", crew.getPath());
         assertEquals(Naming.NodeType.CREW, crew.getType());
 
-        ExternalData cast = tmdbDataSource.getItemByIdentifier("mcredits-866398-cast_976");
+        ExternalData cast = tmdbDataSource.getItemByIdentifier("credits-866398-cast_976");
         assertNotNull(cast);
-        assertEquals("mcredits-866398-cast_976", cast.getId());
-        assertEquals("/movies/2024/2024-01/866398/cast_976", cast.getPath());
+        assertEquals("credits-866398-cast_976", cast.getId());
+        assertEquals("/movies/2024/01/866398/cast_976", cast.getPath());
         assertEquals(Naming.NodeType.CAST, cast.getType());
 
         ExternalData persons = tmdbDataSource.getItemByIdentifier("persons");
@@ -249,7 +249,7 @@ public class TMDBDataSourceTest {
 
             List<String> results = tmdbDataSource.search(query);
             assertFalse(results.isEmpty());
-            assertTrue(results.contains("/movies/1999/1999-03/603"));
+            assertTrue(results.contains("/movies/1999/03/603"));
             LOGGER.info("Search movies for title 'The Matrix': " + results.size());
         }
     }
@@ -270,7 +270,7 @@ public class TMDBDataSourceTest {
 
             List<String> results = tmdbDataSource.search(query);
             assertFalse(results.isEmpty());
-            assertTrue(results.contains("/movies/2024/2024-01/866398/crew_976"));
+            assertTrue(results.contains("/movies/2024/01/866398/crew_976"));
             LOGGER.info("Search credits for crew with id 603: " + results.size());
         }
 
@@ -284,7 +284,7 @@ public class TMDBDataSourceTest {
 
             List<String> results = tmdbDataSource.search(query);
             assertFalse(results.isEmpty());
-            assertTrue(results.contains("/movies/2024/2024-01/866398/cast_976"));
+            assertTrue(results.contains("/movies/2024/01/866398/cast_976"));
             LOGGER.info("Search credits for cast with id 603: " + results.size());
         }
     }

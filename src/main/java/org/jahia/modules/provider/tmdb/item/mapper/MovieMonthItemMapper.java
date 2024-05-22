@@ -51,6 +51,7 @@ import java.util.stream.Collectors;
 public class MovieMonthItemMapper extends ItemMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MovieMonthItemMapper.class);
+    private static final int MAX_CHILD = 1000000;
     public static final String ID_PREFIX = "movies-";
     public MovieMonthItemMapper() {
     }
@@ -80,7 +81,7 @@ public class MovieMonthItemMapper extends ItemMapper {
                             .map(m -> Integer.toString(m.getId()))
                             .collect(Collectors.toList()));
                     builder.page(page.getPage() + 1);
-                } while (page.getPage() < page.getTotalPages() && children.size() < 40);
+                } while (page.getPage() < page.getTotalPages() && children.size() < MAX_CHILD);
             } catch (Exception e) {
                 LOGGER.warn("Error while getting movies ", e);
             }

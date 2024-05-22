@@ -69,6 +69,7 @@ public class MovieItemMapper extends ItemMapper {
     public static final String ID_PREFIX = "movie-";
     public static final String CAST = "cast_";
     public static final String CREW = "crew_";
+    private static final int MAX_CHILD = 1000000;
     private static final Set<String> LAZY_PROPERTIES = Set.of("original_title", "homepage", "status", "runtime", "imdb_id", "budget", "revenue");
     private static final Set<String> LAZY_I18N_PROPERTIES = Set.of(Constants.JCR_TITLE, "overview", "tagline", "poster_path");
 
@@ -174,7 +175,7 @@ public class MovieItemMapper extends ItemMapper {
                     results.addAll(page.getResults().stream().filter(movie -> StringUtils.isNotEmpty(movie.getReleaseDate()))
                             .map(movie -> buildMoviePath(Integer.toString(movie.getId()), movie.getReleaseDate())).collect(Collectors.toList()));
                     builder.page(page.getPage() + 1);
-                } while (page.getPage() < page.getTotalPages() && results.size() < query.getLimit() && results.size() < 100);
+                } while (page.getPage() < page.getTotalPages() && results.size() < query.getLimit() && results.size() < MAX_CHILD);
             }
         } catch (TmdbException e) {
             throw new RepositoryException("Error while searching movie", e);

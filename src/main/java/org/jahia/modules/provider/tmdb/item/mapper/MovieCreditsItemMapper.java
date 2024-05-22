@@ -49,13 +49,13 @@ import java.util.*;
 /**
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{2}/\\d+/(cast_|crew_)\\d+$", idPattern = "^mcredits-\\d+-(cast_|crew_)\\d+$",
+@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{2}/\\d+/(cast_|crew_)\\d+$", idPattern = "^credits-\\d+-(cast_|crew_)\\d+$",
         supportedNodeType = {Naming.NodeType.CREW, Naming.NodeType.CAST}, hasLazyProperties = false)
 public class MovieCreditsItemMapper extends ItemMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MovieCreditsItemMapper.class);
     public static final String PATH_LABEL = "credits";
-    public static final String ID_PREFIX = "mcredits-";
+    public static final String ID_PREFIX = "credits-";
     public static final String CAST = "cast_";
     public static final String CREW = "crew_";
 
@@ -174,8 +174,8 @@ public class MovieCreditsItemMapper extends ItemMapper {
     }
 
     private String buildPath(String mid, String cid, String releaseDate) {
-        String year = StringUtils.substringBefore(releaseDate, "-");
-        String date = StringUtils.substringBeforeLast(releaseDate, "-");
-        return new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(date).append(mid).append(cid).build();
+        String year = releaseDate.split("-")[0];
+        String month = releaseDate.split("-")[1];
+        return new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(month).append(mid).append(cid).build();
     }
 }

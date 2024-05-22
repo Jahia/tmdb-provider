@@ -27,8 +27,11 @@ import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.provider.tmdb.helper.Naming;
 import org.jahia.modules.provider.tmdb.helper.PathBuilder;
+import org.jahia.modules.provider.tmdb.helper.PathHelper;
 import org.jahia.modules.provider.tmdb.item.ItemMapper;
 import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -56,7 +59,7 @@ public class RootItemMapper extends ItemMapper {
         Map<String, String[]> properties = new HashMap<>();
         properties.put(Constants.JCR_TITLE, new String[] { "TMDB" });
         String path = new PathBuilder().build();
-        return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
+        return new ExternalData(ID_PREFIX, path, Naming.NodeType.CONTENT_FOLDER, properties);
     }
 
     @Override public String getIdFromPath(String path) {

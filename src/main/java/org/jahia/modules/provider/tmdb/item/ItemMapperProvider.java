@@ -33,7 +33,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Load all ItemMapper.
+ * Load all ItemMapper and find the right one based on path or id
  *
  * @author Jerome Blanchard
  */
@@ -58,7 +58,7 @@ public class ItemMapperProvider {
     }
 
     public synchronized ItemMapperProvider initialize(Cache cache, TmdbApi apiClient) {
-        LOGGER.info("Initializing ItemMapperProvider");
+        LOGGER.debug("Initializing ItemMapperProvider");
         if (!initialized) {
             ServiceLoader<ItemMapper> loader = ServiceLoader.load(ItemMapper.class, this.getClass().getClassLoader());
             loader.forEach(n -> {

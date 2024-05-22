@@ -35,6 +35,12 @@ public class PathHelper {
         }
     }
 
+    public static void ensureMatches(String path, String pattern) {
+        if (!path.matches(pattern)) {
+            throw new IllegalArgumentException("Invalid path: " + path);
+        }
+    }
+
     public static String getLeaf(String path) {
         if (path == null || path.isEmpty() || path.equals("/")) {
             return "";
