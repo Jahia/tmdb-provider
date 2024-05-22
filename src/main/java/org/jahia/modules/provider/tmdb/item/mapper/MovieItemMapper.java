@@ -69,7 +69,7 @@ public class MovieItemMapper extends ItemMapper {
     public static final String ID_PREFIX = "movie-";
     public static final String CAST = "cast_";
     public static final String CREW = "crew_";
-    private static final int MAX_CHILD = 1000000;
+    private static final int MAX_CHILD = 100;
     private static final Set<String> LAZY_PROPERTIES = Set.of("original_title", "homepage", "status", "runtime", "imdb_id", "budget", "revenue");
     private static final Set<String> LAZY_I18N_PROPERTIES = Set.of(Constants.JCR_TITLE, "overview", "tagline", "poster_path");
 

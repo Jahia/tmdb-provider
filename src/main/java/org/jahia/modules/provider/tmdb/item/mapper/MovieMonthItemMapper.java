@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
 public class MovieMonthItemMapper extends ItemMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MovieMonthItemMapper.class);
-    private static final int MAX_CHILD = 1000000;
+    private static final int MAX_CHILD = 100;
     public static final String ID_PREFIX = "movies-";
     public MovieMonthItemMapper() {
     }

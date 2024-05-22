@@ -115,7 +115,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      */
     @Override
     public List<String> getChildren(String path) throws RepositoryException {
-        LOGGER.debug("getChildren for path: " + path);
+        LOGGER.info("getChildren for path: " + path);
         ItemMapper mapper = mapperProvider.findByPath(path)
                 .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path: " + path));
         return mapper.listChildren(path);
@@ -130,7 +130,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      */
     @Override public ExternalData getItemByIdentifier(String identifier) throws ItemNotFoundException {
         try {
-            LOGGER.debug("getItemByIdentifier for identifier: " + identifier);
+            LOGGER.info("getItemByIdentifier for identifier: " + identifier);
             ItemMapper mapper = mapperProvider.findById(identifier)
                     .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for identifier:" + identifier));
             ExternalData data =  mapper.getData(identifier);
@@ -150,7 +150,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      */
     @Override public ExternalData getItemByPath(String path) throws PathNotFoundException {
         try {
-            LOGGER.debug("getItemByPath for path: " + path);
+            LOGGER.info("getItemByPath for path: " + path);
             ItemMapper mapper = mapperProvider.findByPath(path)
                     .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path: " + path));
             ExternalData data = mapper.getData(mapper.getIdFromPath(path));
@@ -196,12 +196,12 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      * @return <code>true</code> if an item exists at <code>path</code>; otherwise returns <code>false</code>
      */
     @Override public boolean itemExists(String path) {
-        LOGGER.debug("itemExists for path: " + path);
+        LOGGER.info("itemExists for path: " + path);
         return false;
     }
 
     @Override public String[] getPropertyValues(String path, String propertyName) throws PathNotFoundException {
-        LOGGER.debug("getPropertyValues for path: " + path + ", and property: " + propertyName);
+        LOGGER.info("getPropertyValues for path: " + path + ", and property: " + propertyName);
         return getI18nPropertyValues(path, "en", propertyName);
     }
 
@@ -221,7 +221,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     @Override public List<String> search(ExternalQuery query) throws RepositoryException {
         try {
-            LOGGER.debug("search for query: " + query);
+            LOGGER.info("search for query: " + query);
             List<String> results = new ArrayList<>();
             String nodeType = QueryHelper.getNodeType(query.getSource());
             List<ItemMapper> itemMappers = mapperProvider.listForType(nodeType);
