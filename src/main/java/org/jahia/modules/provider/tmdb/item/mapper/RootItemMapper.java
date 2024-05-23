@@ -23,6 +23,7 @@
  */
 package org.jahia.modules.provider.tmdb.item.mapper;
 
+import org.apache.poi.sl.draw.geom.GuideIf;
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.provider.tmdb.helper.Naming;
@@ -30,10 +31,12 @@ import org.jahia.modules.provider.tmdb.helper.PathBuilder;
 import org.jahia.modules.provider.tmdb.helper.PathHelper;
 import org.jahia.modules.provider.tmdb.item.ItemMapper;
 import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
+import org.jahia.modules.provider.tmdb.item.ItemMapperProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Handler for root node of the provider.
@@ -46,6 +49,13 @@ import java.util.*;
 public class RootItemMapper extends ItemMapper {
 
     private static final List<String> CHILDREN = Arrays.asList(MoviesItemMapper.PATH_LABEL, PersonsItemMapper.PATH_LABEL);
+    private static ExternalData NODE;
+    {
+        Map<String, String[]> properties = new HashMap<>();
+        properties.put(Constants.JCR_TITLE, new String[] { "TMDB" });
+        String path = new PathBuilder().build();
+        NODE = new ExternalData(ID_PREFIX, path, Naming.NodeType.CONTENT_FOLDER, properties);
+    }
     public static final String ID_PREFIX = "root";
 
     public RootItemMapper() {
@@ -55,11 +65,19 @@ public class RootItemMapper extends ItemMapper {
         return CHILDREN;
     }
 
+    @Override
+    public List<ExternalData> listChildrenNodes(String path) {
+        ItemMapperProvider provider = ItemMapperProvider.getInstance();
+        return CHILDREN.stream()
+            .map(this::buildChildrenPath)
+            .map(childPath -> provider.findByPath(childPath)
+                .map(mapper -> mapper.getData(mapper.getIdFromPath(childPath))))
+            .flatMap(Optional::stream)
+            .collect(Collectors.toList());
+    }
+
     @Override public ExternalData getData(String identifier) {
-        Map<String, String[]> properties = new HashMap<>();
-        properties.put(Constants.JCR_TITLE, new String[] { "TMDB" });
-        String path = new PathBuilder().build();
-        return new ExternalData(ID_PREFIX, path, Naming.NodeType.CONTENT_FOLDER, properties);
+        return NODE;
     }
 
     @Override public String getIdFromPath(String path) {
@@ -68,5 +86,9 @@ public class RootItemMapper extends ItemMapper {
 
     @Override public String getPathLabel() {
         return "";
+    }
+
+    private String buildChildrenPath(String child) {
+        return new PathBuilder().append(child).build();
     }
 }

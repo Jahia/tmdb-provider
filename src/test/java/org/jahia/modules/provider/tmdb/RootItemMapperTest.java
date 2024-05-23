@@ -76,6 +76,16 @@ public class RootItemMapperTest {
     }
 
     @Test
+    public void testListChildrenNodes() {
+        RootItemMapper rootItemMapper = new RootItemMapper();
+        List<ExternalData> children = rootItemMapper.listChildrenNodes("/");
+        LOGGER.info("Root children: {}", children);
+        assertTrue(children.stream().anyMatch(c -> c.getId().equals("movies")));
+        assertTrue(children.stream().anyMatch(c -> c.getId().equals("persons")));
+        assertEquals(2, children.size());
+    }
+
+    @Test
     public void testGetData() {
         RootItemMapper rootItemMapper = new RootItemMapper();
         ExternalData data = rootItemMapper.getData("root");

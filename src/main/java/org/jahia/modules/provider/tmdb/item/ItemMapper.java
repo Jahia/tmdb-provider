@@ -68,6 +68,8 @@ public abstract class ItemMapper {
 
     abstract public List<String> listChildren(String path);
 
+    abstract public List<ExternalData> listChildrenNodes(String path);
+
     abstract public ExternalData getData(String identifier);
 
     abstract public String getIdFromPath(String path);

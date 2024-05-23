@@ -36,8 +36,7 @@ import java.util.Set;
 
 @Component(service = { ExternalDataSource.class, TMDBDataSource.class }, immediate = true, configurationPid = "org.jahia.modules"
         + ".tmdbprovider") @Designate(ocd = TMDBDataSource.Config.class)
-public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.LazyProperty, ExternalDataSource.Searchable {
-
+public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.LazyProperty, ExternalDataSource.Searchable, ExternalDataSource.CanLoadChildrenInBatch {
     @ObjectClassDefinition(name = "TMDB Provider", description = "A TMDB Provider configuration")
     public @interface Config {
         @AttributeDefinition(name = "TMDB API key", defaultValue = "", description = "The API key to use for The Movie Database") String apiKey() default "";
@@ -119,6 +118,13 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         ItemMapper mapper = mapperProvider.findByPath(path)
                 .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path: " + path));
         return mapper.listChildren(path);
+    }
+
+    @Override public List<ExternalData> getChildrenNodes(String path) throws RepositoryException {
+        LOGGER.info("getChildrenNodes for path: " + path);
+        ItemMapper mapper = mapperProvider.findByPath(path)
+                .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path: " + path));
+        return mapper.listChildrenNodes(path);
     }
 
     /**
