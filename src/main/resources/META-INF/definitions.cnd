@@ -52,3 +52,7 @@
  - birthday (date)
  - deathday (date)
  - profile (string) fulltextsearchable=no
+ + rank (jnt:moviePersonRank)  = jnt:moviePersonRank autocreated
+
+[jnt:moviePersonRank] > jnt:content
+  - test (string)

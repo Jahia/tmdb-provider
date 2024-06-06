@@ -21,42 +21,10 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.helper;
-
-import com.google.common.collect.Sets;
-
-import java.util.Set;
+package org.jahia.modules.provider.tmdb.binding.movies;
 
 /**
- * Global naming for some variables
- *
  * @author Jerome Blanchard
  */
-public class Naming {
-
-    public static final Set<String> NODE_TYPES = Sets.newHashSet(
-            NodeType.CONTENT_FOLDER,
-            NodeType.CONTENT_REFERENCE,
-            NodeType.MOVIES_LIST,
-            NodeType.MOVIE,
-            NodeType.MOVIE_PERSON,
-            NodeType.CAST,
-            NodeType.CREW);
-
-    public static class NodeType {
-        public static final String CONTENT_FOLDER = "jnt:contentFolder";
-        public static final String CONTENT_REFERENCE = "jnt:contentReference";
-        public static final String MOVIE ="jnt:movie";
-        public static final String MOVIES_LIST = "jnt:moviesList";
-        public static final String MOVIE_PERSON = "jnt:moviePerson";
-        public static final String CAST = "jnt:cast";
-        public static final String CREW = "jnt:crew";
-    }
-
-    public static class Property {
-        public static final String POSTER_PATH = "poster_path";
-        public static final String IMAGES = "images";
-        public static final String BASE_URL = "base_url";
-    }
-
+public class CreditsNode {
 }

@@ -21,49 +21,35 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item.mapper;
+package org.jahia.modules.provider.tmdb.binding;
 
-import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalData;
-import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
+import org.jahia.modules.provider.tmdb.data.ProviderData;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Handler for error in the provider node browsing.
+ * Map item on a tree based
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/error$", idPattern = "^error$", supportedNodeType = {}, hasLazyProperties = false)
-public class ErrorItemMapper extends ItemMapper {
+public interface NodeBinding {
 
-    public static final String PATH_LABEL = "error";
-    public static final String ID_PREFIX = "";
+    String getPathPattern();
+    String getIdPattern();
+    List<ExternalData> listChildren(String path);
+    String findNodeId(String path);
+    ExternalData getData(String identifier);
+    String[] getProperty(String identifier, String lang, String propertyName);
 
-
-    public ErrorItemMapper() {
-    }
-
-    @Override public List<String> listChildren(String path) {
+    /*
+    public List<String> search(String nodeType, ExternalQuery query) throws RepositoryException {
         return Collections.emptyList();
     }
 
-    @Override public ExternalData getData(String identifier) {
-        Map<String, String[]> properties = new HashMap<>();
-        properties.put(Constants.JCR_TITLE, new String[] { PATH_LABEL });
-        return new ExternalData(identifier, "", Naming.NodeType.CONTENT_FOLDER, properties);
+    public String[] getProperty(String identifier, String lang, String propertyName) {
+        return new String[] {};
     }
+    */
 
-    @Override public String getIdFromPath(String path) {
-        return ID_PREFIX;
-    }
-
-    @Override public String getPathLabel() {
-        return PATH_LABEL;
-    }
 }

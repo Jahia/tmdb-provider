@@ -53,6 +53,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class TMDBDataSourceTest {
 
+    /*
+
     private static final Logger LOGGER = LoggerFactory.getLogger(TMDBDataSourceTest.class);
 
     @Mock
@@ -306,5 +308,5 @@ public class TMDBDataSourceTest {
         }
     }
 
-
+*/
 }

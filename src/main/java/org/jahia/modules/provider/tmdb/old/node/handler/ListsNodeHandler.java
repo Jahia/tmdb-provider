@@ -21,40 +21,30 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item.mapper;
-
-import org.apache.commons.lang.StringUtils;
-import org.jahia.modules.external.ExternalData;
-import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.helper.PathBuilder;
-import org.jahia.modules.provider.tmdb.helper.PathHelper;
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+package org.jahia.modules.provider.tmdb.old.node.handler;
 
 /**
  * Short description of the class
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/lists/[a-z0-9]+/\\d+$", idPattern = "^mref-[a-z0-9]+\\d+$", supportedNodeType =
-        {Naming.NodeType.CONTENT_REFERENCE}, hasLazyProperties = false)
-public class MovieReferenceItemMapper extends ItemMapper {
+//@NodeMapping(pathPattern = "^/lists/[a-z0-9]+/\\d+$", idPattern = "^mref-[a-z0-9]+\\d+$", supportedNodeType =
+//        {Naming.NodeType.CONTENT_REFERENCE}, hasLazyProperties = false)
+public class ListsNodeHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MovieReferenceItemMapper.class);
+    /*
+    private static final Logger LOGGER = LoggerFactory.getLogger(ListsNodeHandler.class);
     public static final String PATH_LABEL = "lists";
     public static final String ID_PREFIX = "mref-";
 
-    public MovieReferenceItemMapper() {
+    public ListsNodeHandler() {
     }
 
     @Override public List<String> listChildren(String path) {
+        return Collections.emptyList();
+    }
+
+    @Override public List<ExternalData> listChildrenNodes(String path) {
         return Collections.emptyList();
     }
 
@@ -63,7 +53,7 @@ public class MovieReferenceItemMapper extends ItemMapper {
         String listId = StringUtils.substringBefore(cleanId, "-");
         int movieId = Integer.parseInt(StringUtils.substringAfter(cleanId, "-"));
         Map<String, String[]> properties = new HashMap<>();
-        properties.put("j:node", new String[] { MovieItemMapper.ID_PREFIX + movieId });
+        properties.put("j:node", new String[] { MovieNodeHandler.ID_PREFIX + movieId });
         String path = new PathBuilder(PATH_LABEL).append(listId).append(movieId).build();
         return new ExternalData(identifier, path, Naming.NodeType.CONTENT_REFERENCE, properties);
     }
@@ -75,4 +65,6 @@ public class MovieReferenceItemMapper extends ItemMapper {
     @Override public String getPathLabel() {
         return PATH_LABEL;
     }
+
+     */
 }

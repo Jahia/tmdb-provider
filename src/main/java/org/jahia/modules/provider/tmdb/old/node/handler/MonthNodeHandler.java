@@ -21,24 +21,7 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item.mapper;
-
-import info.movito.themoviedbapi.model.core.MovieResultsPage;
-import info.movito.themoviedbapi.tools.builders.discover.DiscoverMovieParamBuilder;
-import net.sf.ehcache.Element;
-import org.apache.commons.lang.StringUtils;
-import org.jahia.api.Constants;
-import org.jahia.modules.external.ExternalData;
-import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.helper.PathBuilder;
-import org.jahia.modules.provider.tmdb.helper.PathHelper;
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.stream.Collectors;
+package org.jahia.modules.provider.tmdb.old.node.handler;
 
 /**
  * Handler for movies node.
@@ -46,14 +29,17 @@ import java.util.stream.Collectors;
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{2}$", idPattern = "^movies-\\d{4}-\\d{2}$", supportedNodeType =
-        {Naming.NodeType.CONTENT_FOLDER}, hasLazyProperties = false)
-public class MovieMonthItemMapper extends ItemMapper {
+//@NodeMapping(pathPattern = "^/movies/\\d{4}/\\d{2}$", idPattern = "^movies-\\d{4}-\\d{2}$", supportedNodeType =
+//        {Naming.NodeType.CONTENT_FOLDER}, hasLazyProperties = false)
+public class MonthNodeHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MovieMonthItemMapper.class);
+    /*
+    private static final Logger LOGGER = LoggerFactory.getLogger(MonthNodeHandler.class);
     private static final int MAX_CHILD = 100;
     public static final String ID_PREFIX = "movies-";
-    public MovieMonthItemMapper() {
+    public static final String CACHE_PREFIX = "months-";
+
+    public MonthNodeHandler() {
     }
 
     @Override public List<String> listChildren(String path) {
@@ -90,14 +76,25 @@ public class MovieMonthItemMapper extends ItemMapper {
         }
     }
 
+    @Override public List<ExternalData> listChildrenNodes(String path) {
+        // ${TODO} Use the discover API to get the movies for the month
+        return null;
+    }
+
     @Override public ExternalData getData(String identifier) {
-        final String date = StringUtils.substring(identifier, ID_PREFIX.length());
-        final String year = date.split("-")[0];
-        final String month = date.split("-")[1];
-        Map<String, String[]> properties = new HashMap<>();
-        properties.put(Constants.JCR_TITLE, new String[] { date });
-        String path = new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(month).build();
-        return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
+        if (getCache().get(CACHE_PREFIX + identifier) != null) {
+            return (ExternalData) getCache().get(CACHE_PREFIX + identifier).getObjectValue();
+        } else {
+            final String date = StringUtils.substring(identifier, ID_PREFIX.length());
+            final String year = date.split("-")[0];
+            final String month = date.split("-")[1];
+            Map<String, String[]> properties = new HashMap<>();
+            properties.put(Constants.JCR_TITLE, new String[] { date });
+            String path = new PathBuilder(MoviesNodeHandler.PATH_LABEL).append(year).append(month).build();
+            ExternalData data = new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
+            getCache().put(new Element(CACHE_PREFIX + identifier, data));
+            return data;
+        }
     }
 
     @Override public String getIdFromPath(String path) {
@@ -107,4 +104,6 @@ public class MovieMonthItemMapper extends ItemMapper {
     @Override public String getPathLabel() {
         return "";
     }
+
+     */
 }

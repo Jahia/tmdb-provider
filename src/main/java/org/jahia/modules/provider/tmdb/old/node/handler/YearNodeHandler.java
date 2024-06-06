@@ -21,20 +21,7 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item.mapper;
-
-import org.apache.commons.lang.StringUtils;
-import org.jahia.api.Constants;
-import org.jahia.modules.external.ExternalData;
-import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.helper.PathBuilder;
-import org.jahia.modules.provider.tmdb.helper.PathHelper;
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
-
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+package org.jahia.modules.provider.tmdb.old.node.handler;
 
 /**
  * Handler for movies years node.
@@ -42,15 +29,17 @@ import java.util.stream.IntStream;
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}$", idPattern = "^movies-\\d{4}$", supportedNodeType =
-        {Naming.NodeType.CONTENT_FOLDER}, hasLazyProperties = false)
-public class MovieYearItemMapper extends ItemMapper {
+//@NodeMapping(pathPattern = "^/movies/\\d{4}$", idPattern = "^movies-\\d{4}$", supportedNodeType =
+//        {Naming.NodeType.CONTENT_FOLDER}, hasLazyProperties = false)
+public class YearNodeHandler  {
+    /*
     public static final String ID_PREFIX = "movies-";
+    public static final String CACHE_PREFIX = "years-";
     private static final List<String> CHILDREN = IntStream.rangeClosed(1, 12)
             .mapToObj(i -> StringUtils.leftPad(Integer.toString(i), 2, "0"))
             .collect(Collectors.toList());
 
-    public MovieYearItemMapper() {
+    public YearNodeHandler() {
     }
 
     //Children of the /movies/{year} node are the months we want to display in browsing, current year is limited to current month
@@ -70,12 +59,23 @@ public class MovieYearItemMapper extends ItemMapper {
         return Collections.emptyList();
     }
 
+    @Override public List<ExternalData> listChildrenNodes(String path) {
+        // ${TODO} Auto-generated method stub
+        return null;
+    }
+
     @Override public ExternalData getData(String identifier) {
-        final String year = StringUtils.substring(identifier, ID_PREFIX.length());
-        Map<String, String[]> properties = new HashMap<>();
-        properties.put(Constants.JCR_TITLE, new String[] { year });
-        String path = new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).build();
-        return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
+        if (getCache().get(CACHE_PREFIX + identifier) != null) {
+            return (ExternalData) getCache().get(CACHE_PREFIX + identifier).getObjectValue();
+        } else {
+            final String year = StringUtils.substring(identifier, ID_PREFIX.length());
+            Map<String, String[]> properties = new HashMap<>();
+            properties.put(Constants.JCR_TITLE, new String[] { year });
+            String path = new PathBuilder(MoviesNodeHandler.PATH_LABEL).append(year).build();
+            ExternalData data = new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
+            getCache().put(new Element(CACHE_PREFIX + identifier, data));
+            return data;
+        }
     }
 
     @Override public String getIdFromPath(String path) {
@@ -85,4 +85,8 @@ public class MovieYearItemMapper extends ItemMapper {
     @Override public String getPathLabel() {
         return "";
     }
+
+     */
+
+
 }

@@ -21,59 +21,30 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item.mapper;
-
-import info.movito.themoviedbapi.model.core.MovieResultsPage;
-import info.movito.themoviedbapi.model.movies.Credits;
-import info.movito.themoviedbapi.model.movies.MovieDb;
-import info.movito.themoviedbapi.tools.TmdbException;
-import info.movito.themoviedbapi.tools.appendtoresponse.MovieAppendToResponse;
-import info.movito.themoviedbapi.tools.builders.discover.DiscoverMovieParamBuilder;
-import info.movito.themoviedbapi.tools.sortby.DiscoverMovieSortBy;
-import net.sf.ehcache.Element;
-import org.apache.commons.lang.StringUtils;
-import org.jahia.api.Constants;
-import org.jahia.modules.external.ExternalData;
-import org.jahia.modules.external.ExternalQuery;
-import org.jahia.modules.external.events.EventService;
-import org.jahia.modules.external.query.QueryHelper;
-import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.helper.PathBuilder;
-import org.jahia.modules.provider.tmdb.helper.PathHelper;
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
-import org.jahia.osgi.BundleUtils;
-import org.jahia.services.content.JCRSessionFactory;
-import org.jahia.services.content.JCRStoreProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.jcr.RepositoryException;
-import javax.jcr.Value;
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+package org.jahia.modules.provider.tmdb.old.node.handler;
 
 /**
  * Short description of the class
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{2}/\\d+(?:/j:translation_[a-z]{2})?$", idPattern = "^movie-\\d+", supportedNodeType =
-        {Naming.NodeType.MOVIE}, hasLazyProperties = true)
-public class MovieItemMapper extends ItemMapper {
+//@NodeMapping(pathPattern = "^/movies/\\d{4}/\\d{2}/\\d+(?:/j:translation_[a-z]{2})?$", idPattern = "^movie-\\d+", supportedNodeType =
+//        {Naming.NodeType.MOVIE}, hasLazyProperties = true)
+public class MovieNodeHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MovieItemMapper.class);
+    /*
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MovieNodeHandler.class);
     public static final String PATH_LABEL = "movie";
     public static final String ID_PREFIX = "movie-";
     public static final String CAST = "cast_";
     public static final String CREW = "crew_";
     private static final int MAX_CHILD = 100;
-    private static final Set<String> LAZY_PROPERTIES = Set.of("original_title", "homepage", "status", "runtime", "imdb_id", "budget", "revenue");
+    private static final Set<String> LAZY_PROPERTIES = Set.of("original_title", "homepage", "status", "runtime", "imdb_id", "budget",
+            "revenue", "genres", "keywords");
     private static final Set<String> LAZY_I18N_PROPERTIES = Set.of(Constants.JCR_TITLE, "overview", "tagline", "poster_path");
 
-    public MovieItemMapper() {
+    public MovieNodeHandler() {
     }
 
     @Override public List<String> listChildren(String path) {
@@ -102,6 +73,11 @@ public class MovieItemMapper extends ItemMapper {
         }
     }
 
+    @Override public List<ExternalData> listChildrenNodes(String path) {
+        // ${TODO} Use the discover API to get the movies for the month
+        return null;
+    }
+
     @Override public ExternalData getData(String identifier) {
         String mid = identifier.substring(ID_PREFIX.length());
         String cacheKey = Naming.Cache.MOVIE_CACHE_PREFIX + mid;
@@ -110,31 +86,9 @@ public class MovieItemMapper extends ItemMapper {
         } else {
             try {
                 MovieDb movie = getApiClient().getMovies().getDetails(Integer.parseInt(mid), "en", MovieAppendToResponse.KEYWORDS);
-                String baseUrl = getConfiguration().getImageConfig().getBaseUrl();
-                Map<String, String[]> properties = new HashMap<>();
-                if (StringUtils.isNotEmpty(movie.getBackdropPath())) {
-                    properties.put("backdrop_path",
-                            new String[] { baseUrl.concat(getConfiguration().getImageConfig().getBackdropSizes().get(1)).concat(movie.getBackdropPath()) });
-                }
-                if (StringUtils.isNotEmpty(movie.getReleaseDate())) {
-                    properties.put("release_date", new String[] { movie.getReleaseDate() + "T00:00:00.000+00:00" });
-                }
-                properties.put("adult", new String[] { Boolean.toString(movie.getAdult()) });
-                properties.put("vote_average", new String[] { Double.toString(movie.getVoteAverage()) });
-                properties.put("vote_count", new String[] { Integer.toString(movie.getVoteCount()) });
-                properties.put("popularity", new String[] { Double.toString(movie.getPopularity()) });
-                if (!movie.getGenres().isEmpty()) {
-                    properties.put("j:tagList", movie.getGenres().stream().map(g -> g.getName()).collect(Collectors.toList()).toArray(new String[0]));
-                }
-                if (!movie.getKeywords().getKeywords().isEmpty()) {
-                    properties.put("j:tagList", movie.getKeywords().getKeywords().stream().map(g -> g.getName()).collect(Collectors.toList()).toArray(new String[0]));
-                }
-                String path = buildMoviePath(mid, movie.getReleaseDate());
-                ExternalData data = new ExternalData(identifier, path, Naming.NodeType.MOVIE, properties);
-                data.setLazyProperties(new HashSet<>(LAZY_PROPERTIES));
-                data.setLazyI18nProperties(Map.of("en", new HashSet<>(LAZY_I18N_PROPERTIES), "fr", new HashSet<>(LAZY_I18N_PROPERTIES)));
-                this.notify(mid, data);
+                ExternalData data = fromMovieDb(movie);
                 getCache().put(new Element(cacheKey, data));
+                this.notify(mid, data);
                 return data;
             } catch (TmdbException e) {
                 LOGGER.warn("Error while getting movie data", e);
@@ -187,6 +141,14 @@ public class MovieItemMapper extends ItemMapper {
         MovieDb movie;
         String mid = identifier.substring(ID_PREFIX.length());
         String cacheKey = Naming.Cache.MOVIE_FULL_CACHE_PREFIX + lang + "-" + mid;
+        //TODO Add genre and keywords as lazy props and it should be some parsed list :
+        //if (!movie.getGenres().isEmpty()) {
+        //  properties.put("j:tagList", movie.getGenres().stream().map(g -> g.getName()).collect(Collectors.toList()).toArray(new String[0]));
+        //}
+        //if (!movie.getKeywords().getKeywords().isEmpty()) {
+        //  properties.put("j:tagList", movie.getKeywords().getKeywords().stream().map(g -> g.getName()).collect(Collectors.toList())
+        // .toArray(new String[0]));
+        //}
         Map<String, String[]> properties = new HashMap<>();
         try {
             if (getCache().get(cacheKey) != null) {
@@ -230,6 +192,50 @@ public class MovieItemMapper extends ItemMapper {
         return new String[] { "" };
     }
 
+    public ExternalData fromMovie(Movie movie) throws TmdbException {
+        String baseUrl = getConfiguration().getImageConfig().getBaseUrl();
+        Map<String, String[]> properties = new HashMap<>();
+        if (StringUtils.isNotEmpty(movie.getBackdropPath())) {
+            properties.put("backdrop_path",
+                    new String[] { baseUrl.concat(getConfiguration().getImageConfig().getBackdropSizes().get(1)).concat(movie.getBackdropPath()) });
+        }
+        if (StringUtils.isNotEmpty(movie.getReleaseDate())) {
+            properties.put("release_date", new String[] { movie.getReleaseDate() + "T00:00:00.000+00:00" });
+        }
+        properties.put("adult", new String[] { Boolean.toString(movie.getAdult()) });
+        properties.put("vote_average", new String[] { Double.toString(movie.getVoteAverage()) });
+        properties.put("vote_count", new String[] { Integer.toString(movie.getVoteCount()) });
+        properties.put("popularity", new String[] { Double.toString(movie.getPopularity()) });
+        String path = buildMoviePath(Integer.toString(movie.getId()), movie.getReleaseDate());
+        String identifier = ID_PREFIX + movie.getId();
+        ExternalData data = new ExternalData(identifier, path, Naming.NodeType.MOVIE, properties);
+        data.setLazyProperties(new HashSet<>(LAZY_PROPERTIES));
+        data.setLazyI18nProperties(Map.of("en", new HashSet<>(LAZY_I18N_PROPERTIES), "fr", new HashSet<>(LAZY_I18N_PROPERTIES)));
+        return data;
+    }
+
+    public ExternalData fromMovieDb(MovieDb movie) throws TmdbException {
+        String baseUrl = getConfiguration().getImageConfig().getBaseUrl();
+        Map<String, String[]> properties = new HashMap<>();
+        if (StringUtils.isNotEmpty(movie.getBackdropPath())) {
+            properties.put("backdrop_path",
+                    new String[] { baseUrl.concat(getConfiguration().getImageConfig().getBackdropSizes().get(1)).concat(movie.getBackdropPath()) });
+        }
+        if (StringUtils.isNotEmpty(movie.getReleaseDate())) {
+            properties.put("release_date", new String[] { movie.getReleaseDate() + "T00:00:00.000+00:00" });
+        }
+        properties.put("adult", new String[] { Boolean.toString(movie.getAdult()) });
+        properties.put("vote_average", new String[] { Double.toString(movie.getVoteAverage()) });
+        properties.put("vote_count", new String[] { Integer.toString(movie.getVoteCount()) });
+        properties.put("popularity", new String[] { Double.toString(movie.getPopularity()) });
+        String path = buildMoviePath(Integer.toString(movie.getId()), movie.getReleaseDate());
+        String identifier = ID_PREFIX + movie.getId();
+        ExternalData data = new ExternalData(identifier, path, Naming.NodeType.MOVIE, properties);
+        data.setLazyProperties(new HashSet<>(LAZY_PROPERTIES));
+        data.setLazyI18nProperties(Map.of("en", new HashSet<>(LAZY_I18N_PROPERTIES), "fr", new HashSet<>(LAZY_I18N_PROPERTIES)));
+        return data;
+    }
+
     private void notify(String mid, ExternalData data) {
         String cacheKey = Naming.Cache.INDEXED_FULL_MOVIE_CACHE_PREFIX + mid;
         if (getCache().get(cacheKey) == null) {
@@ -250,6 +256,8 @@ public class MovieItemMapper extends ItemMapper {
     private String buildMoviePath(String mid, String releaseDate) {
         String year = releaseDate.split( "-")[0];
         String month = releaseDate.split( "-")[1];
-        return new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(month).append(mid).build();
+        return new PathBuilder(MoviesNodeHandler.PATH_LABEL).append(year).append(month).append(mid).build();
     }
+
+     */
 }

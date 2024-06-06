@@ -41,6 +41,10 @@ public class PathHelper {
         }
     }
 
+    public static boolean isRoot(String path) {
+        return path.equals("/");
+    }
+
     public static String getLeaf(String path) {
         if (path == null || path.isEmpty() || path.equals("/")) {
             return "";
@@ -58,7 +62,7 @@ public class PathHelper {
             return null; // root has no parent
         }
         if (segments.length == 2) {
-            return ""; // top-level nodes have root as parent
+            return "/"; // top-level nodes have root as parent
         }
         return segments[segments.length - 2];
     }

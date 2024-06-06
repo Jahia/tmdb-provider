@@ -1,24 +1,17 @@
 package org.jahia.modules.provider.tmdb;
 
-import info.movito.themoviedbapi.TmdbApi;
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.CacheException;
-import org.apache.commons.lang.StringUtils;
 import org.jahia.exceptions.JahiaInitializationException;
 import org.jahia.modules.external.*;
 import org.jahia.modules.external.query.QueryHelper;
+import org.jahia.modules.provider.tmdb.data.ProviderData;
 import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.http.TmdbApacheHttpClient;
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperProvider;
-import org.jahia.services.cache.CacheProvider;
+import org.jahia.modules.provider.tmdb.helper.PathHelper;
+import org.jahia.modules.provider.tmdb.data.ProviderDataCollection;
+import org.jahia.modules.provider.tmdb.binding.NodeBinding;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.metatype.annotations.AttributeDefinition;
-import org.osgi.service.metatype.annotations.Designate;
-import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,63 +22,27 @@ import javax.jcr.RepositoryException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-//TODO Many movies have no releaseDate so mapping using date in path is not the good one. Prefer a base path mapping using only movie id and
-// use the date only for search and redirection. TO avoid URL overlap in pattern either use a mid segment /movies/id/123 and
-// /movies/date/1999-03  or always use a month in the date segment (there is no - in movie id)
-
-@Component(service = { ExternalDataSource.class, TMDBDataSource.class }, immediate = true, configurationPid = "org.jahia.modules"
-        + ".tmdbprovider") @Designate(ocd = TMDBDataSource.Config.class)
+@Component(service = { ExternalDataSource.class, TMDBDataSource.class }, immediate = true,
+        configurationPid = "org.jahia.modules.tmdbprovider")
 public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.LazyProperty, ExternalDataSource.Searchable, ExternalDataSource.CanLoadChildrenInBatch {
-    @ObjectClassDefinition(name = "TMDB Provider", description = "A TMDB Provider configuration")
-    public @interface Config {
-        @AttributeDefinition(name = "TMDB API key", defaultValue = "", description = "The API key to use for The Movie Database") String apiKey() default "";
-        @AttributeDefinition(name = "TMDB Mount path", defaultValue = "/sites/systemsite/contents/tmdb", description = "The path at which "
-                + "to mount the database in the JCR") String mountPoint() default "/sites/systemsite/contents/tmdb";
-    }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TMDBDataSource.class);
     private static final List<String> EXTENDABLE_TYPES = List.of("nt:base");
 
-    private CacheProvider cacheProvider;
-    private Cache cache;
-    private TmdbApi apiClient;
-    private ItemMapperProvider mapperProvider;
+    @Reference
     private ExternalContentStoreProviderFactory externalContentStoreProviderFactory;
     private ExternalContentStoreProvider externalContentStoreProvider;
+    @Reference
+    private TMDBMapperFactory mapperFactory;
 
     public TMDBDataSource() {
     }
 
-    @Reference
-    public void setCacheProvider(CacheProvider cacheProvider) {
-        this.cacheProvider = cacheProvider;
-    }
-
-    @Reference
-    public void setExternalContentStoreProviderFactory(ExternalContentStoreProviderFactory externalContentStoreProviderFactory) {
-        this.externalContentStoreProviderFactory = externalContentStoreProviderFactory;
-    }
-
     @Activate
-    public void start(Config config) throws RepositoryException {
-        if (StringUtils.isEmpty(config.apiKey())) {
-            LOGGER.warn("API key is not set, TMDB provider will not initialize.");
-            return;
-        }
-
-        try {
-            if (!cacheProvider.getCacheManager().cacheExists(Naming.Cache.TMDB_CACHE)) {
-                cacheProvider.getCacheManager().addCache(Naming.Cache.TMDB_CACHE);
-            }
-            cache = cacheProvider.getCacheManager().getCache(Naming.Cache.TMDB_CACHE);
-        } catch (IllegalStateException | CacheException e) {
-            LOGGER.error("Error while initializing cache for IMDB", e);
-        }
-
-        apiClient = new TmdbApi(new TmdbApacheHttpClient(config.apiKey()));
-        mapperProvider = ItemMapperProvider.getInstance().initialize(cache, apiClient);
-
+    public void start(TMDBDataSourceConfig config) throws RepositoryException {
+        LOGGER.info("Starting TMDBDataSource...");
         externalContentStoreProvider = externalContentStoreProviderFactory.newProvider();
         externalContentStoreProvider.setDataSource(this);
         externalContentStoreProvider.setExtendableTypes(EXTENDABLE_TYPES);
@@ -96,16 +53,16 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
         } catch (JahiaInitializationException e) {
             throw new RepositoryException("Error initializing TMDB Provider", e);
         }
+        LOGGER.info("TMDBDataSource started");
     }
 
     @Deactivate
     public void stop() {
-        if (apiClient != null) {
-            apiClient = null;
-        }
+        LOGGER.info("Stopping TMDBDataSource...");
         if (externalContentStoreProvider != null) {
             externalContentStoreProvider.stop();
         }
+        LOGGER.info("TMDBDataSource stopped");
     }
 
     /**
@@ -115,16 +72,15 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     @Override
     public List<String> getChildren(String path) throws RepositoryException {
         LOGGER.info("getChildren for path: " + path);
-        ItemMapper mapper = mapperProvider.findByPath(path)
-                .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path: " + path));
-        return mapper.listChildren(path);
+        NodeBinding mapper = mapperFactory.findNodeBindingForPath(path);
+        return mapper.listChildren(path).stream().map(ExternalData::getPath).map(PathHelper::getLeaf).collect(Collectors.toList());
     }
 
-    @Override public List<ExternalData> getChildrenNodes(String path) throws RepositoryException {
+    @Override
+    public List<ExternalData> getChildrenNodes(String path) throws RepositoryException {
         LOGGER.info("getChildrenNodes for path: " + path);
-        ItemMapper mapper = mapperProvider.findByPath(path)
-                .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path: " + path));
-        return mapper.listChildrenNodes(path);
+        NodeBinding mapper = mapperFactory.findNodeBindingForPath(path);
+        return mapper.listChildren(path);
     }
 
     /**
@@ -134,16 +90,14 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      * @return ExternalData defined by the identifier
      * @throws javax.jcr.ItemNotFoundException
      */
-    @Override public ExternalData getItemByIdentifier(String identifier) throws ItemNotFoundException {
+    @Override
+    public ExternalData getItemByIdentifier(String identifier) throws ItemNotFoundException {
         try {
             LOGGER.info("getItemByIdentifier for identifier: " + identifier);
-            ItemMapper mapper = mapperProvider.findById(identifier)
-                    .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for identifier:" + identifier));
-            ExternalData data =  mapper.getData(identifier);
-            if (data == null) throw new ItemNotFoundException("No item found for identifier: " + identifier);
-            return data;
+            NodeBinding mapper = mapperFactory.findNodeBindingForIdentifier(identifier);
+            return mapper.getData(identifier);
         } catch (RepositoryException e) {
-            throw new ItemNotFoundException("Error while getting item for identifier " + identifier, e);
+            throw new ItemNotFoundException("No item found for identifier: " + identifier, e);
         }
     }
 
@@ -154,12 +108,13 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      * @return ExternalData
      * @throws javax.jcr.PathNotFoundException
      */
-    @Override public ExternalData getItemByPath(String path) throws PathNotFoundException {
+    @Override
+    public ExternalData getItemByPath(String path) throws PathNotFoundException {
         try {
             LOGGER.info("getItemByPath for path: " + path);
-            ItemMapper mapper = mapperProvider.findByPath(path)
-                    .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path: " + path));
-            ExternalData data = mapper.getData(mapper.getIdFromPath(path));
+            NodeBinding mapper = mapperFactory.findNodeBindingForPath(path);
+            String identifier = mapper.findNodeId(path);
+            ExternalData data = mapper.getData(identifier);
             if (data == null) throw new PathNotFoundException("No item found for path: " + path);
             return data;
         } catch (RepositoryException e) {
@@ -213,9 +168,10 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     @Override public String[] getI18nPropertyValues(String path, String lang, String propertyName) throws PathNotFoundException {
         try {
-            ItemMapper mapper = mapperProvider.findByPathForProps(path)
-                    .orElseThrow(() -> new RepositoryException("Unable to find Item Mapper for path:" + path));
-            return mapper.getProperty(mapper.getIdFromPath(path), lang, propertyName);
+            LOGGER.info("getI18nPropertyValues for path: " + path);
+            NodeBinding mapper = mapperFactory.findNodeBindingForPath(path);
+            String identifier = mapper.findNodeId(path);
+            return mapper.getProperty(identifier, lang, propertyName);
         } catch (RepositoryException e) {
             throw new PathNotFoundException("No item found for path: " + path, e);
         }
@@ -230,10 +186,10 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
             LOGGER.info("search for query: " + query);
             List<String> results = new ArrayList<>();
             String nodeType = QueryHelper.getNodeType(query.getSource());
-            List<ItemMapper> itemMappers = mapperProvider.listForType(nodeType);
-            for (ItemMapper mapper : itemMappers) {
-                results.addAll(mapper.search(nodeType, query));
-            }
+            //List<NodeHandler> nodeHandlers = mapperProvider.listForType(nodeType);
+            //for (NodeHandler mapper : nodeHandlers) {
+            //    results.addAll(mapper.search(nodeType, query));
+            //}
             return results;
         } catch (RepositoryException e) {
             throw new PathNotFoundException("Error while searching item for query " + query, e);

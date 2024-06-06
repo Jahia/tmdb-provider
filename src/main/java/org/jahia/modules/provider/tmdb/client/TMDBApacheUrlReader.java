@@ -21,7 +21,7 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.http;
+package org.jahia.modules.provider.tmdb.client;
 
 import info.movito.themoviedbapi.model.core.responses.TmdbResponseException;
 import info.movito.themoviedbapi.tools.RequestType;
@@ -53,9 +53,9 @@ import java.net.URL;
  *
  * @author Jerome Blanchard
  */
-public class TmdbApacheHttpClient implements TmdbUrlReader {
+public class TMDBApacheUrlReader implements TmdbUrlReader {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TmdbApacheHttpClient.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TMDBApacheUrlReader.class);
     public static final int SOCKET_TIMEOUT = 60000;
     public static final int CONNECT_TIMEOUT = 15000;
     public static final int MAX_CONNECTIONS = 10;
@@ -65,7 +65,7 @@ public class TmdbApacheHttpClient implements TmdbUrlReader {
     private HttpClient httpClient;
     private String apikey;
 
-    public TmdbApacheHttpClient(String apikey) {
+    public TMDBApacheUrlReader(String apikey) {
         RequestConfig requestConfig = RequestConfig.custom()
                 .setSocketTimeout(SOCKET_TIMEOUT)
                 .setConnectTimeout(CONNECT_TIMEOUT)

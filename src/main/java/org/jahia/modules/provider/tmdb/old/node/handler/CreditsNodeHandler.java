@@ -21,48 +21,30 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item.mapper;
-
-import info.movito.themoviedbapi.model.movies.Cast;
-import info.movito.themoviedbapi.model.movies.Credits;
-import info.movito.themoviedbapi.model.movies.Crew;
-import info.movito.themoviedbapi.model.movies.MovieDb;
-import info.movito.themoviedbapi.model.people.credits.MovieCredits;
-import info.movito.themoviedbapi.tools.TmdbException;
-import net.sf.ehcache.Element;
-import org.apache.commons.lang.StringUtils;
-import org.jahia.modules.external.ExternalData;
-import org.jahia.modules.external.ExternalQuery;
-import org.jahia.modules.external.query.QueryHelper;
-import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.helper.PathBuilder;
-import org.jahia.modules.provider.tmdb.helper.PathHelper;
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.jcr.RepositoryException;
-import javax.jcr.Value;
-import java.util.*;
+package org.jahia.modules.provider.tmdb.old.node.handler;
 
 /**
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies/\\d{4}/\\d{2}/\\d+/(cast_|crew_)\\d+$", idPattern = "^credits-\\d+-(cast_|crew_)\\d+$",
-        supportedNodeType = {Naming.NodeType.CREW, Naming.NodeType.CAST}, hasLazyProperties = false)
-public class MovieCreditsItemMapper extends ItemMapper {
+//@NodeMapping(pathPattern = "^/movies/\\d{4}/\\d{2}/\\d+/(cast_|crew_)\\d+$", idPattern = "^credits-\\d+-(cast_|crew_)\\d+$",
+//        supportedNodeType = {Naming.NodeType.CREW, Naming.NodeType.CAST}, hasLazyProperties = false)
+public class CreditsNodeHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MovieCreditsItemMapper.class);
+    /*
+    private static final Logger LOGGER = LoggerFactory.getLogger(CreditsNodeHandler.class);
     public static final String PATH_LABEL = "credits";
     public static final String ID_PREFIX = "credits-";
     public static final String CAST = "cast_";
     public static final String CREW = "crew_";
 
-    public MovieCreditsItemMapper() {
+    public CreditsNodeHandler() {
     }
 
     @Override public List<String> listChildren(String path) {
+        return Collections.emptyList();
+    }
+
+    @Override public List<ExternalData> listChildrenNodes(String path) {
         return Collections.emptyList();
     }
 
@@ -79,7 +61,7 @@ public class MovieCreditsItemMapper extends ItemMapper {
                 Credits credits = getApiClient().getMovies().getCredits(Integer.parseInt(movieId), "en");
                 String year = movie.getReleaseDate().split("-")[0];
                 String month = movie.getReleaseDate().split("-")[1];
-                String path = new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(month).append(movieId).append(creditsId).build();
+                String path = new PathBuilder(MoviesNodeHandler.PATH_LABEL).append(year).append(month).append(movieId).append(creditsId).build();
                 String baseUrl = getConfiguration().getImageConfig().getBaseUrl();
                 if (creditsId.startsWith(CREW)) {
                     String pid = creditsId.substring(CREW.length());
@@ -92,7 +74,7 @@ public class MovieCreditsItemMapper extends ItemMapper {
                     if (StringUtils.isNotEmpty(crew.getJob())) {
                         properties.put("job", new String[] { crew.getJob() });
                     }
-                    properties.put("person", new String[] { PersonsItemMapper.ID_PREFIX + crew.getId() });
+                    properties.put("person", new String[] { PersonsNodeHandler.ID_PREFIX + crew.getId() });
                     if (StringUtils.isNotEmpty(crew.getName())) {
                         properties.put("name", new String[] { crew.getName() });
                     }
@@ -176,6 +158,8 @@ public class MovieCreditsItemMapper extends ItemMapper {
     private String buildPath(String mid, String cid, String releaseDate) {
         String year = releaseDate.split("-")[0];
         String month = releaseDate.split("-")[1];
-        return new PathBuilder(MoviesItemMapper.PATH_LABEL).append(year).append(month).append(mid).append(cid).build();
+        return new PathBuilder(MoviesNodeHandler.PATH_LABEL).append(year).append(month).append(mid).append(cid).build();
     }
+
+     */
 }

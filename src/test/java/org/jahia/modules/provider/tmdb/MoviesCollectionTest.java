@@ -21,42 +21,49 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.helper;
+package org.jahia.modules.provider.tmdb;
 
-import com.google.common.collect.Sets;
+import net.sf.ehcache.Element;
+import org.jahia.modules.provider.tmdb.data.MoviesCollection;
+import org.jahia.modules.provider.tmdb.data.ProviderData;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Global naming for some variables
- *
  * @author Jerome Blanchard
  */
-public class Naming {
+public class MoviesCollectionTest {
 
-    public static final Set<String> NODE_TYPES = Sets.newHashSet(
-            NodeType.CONTENT_FOLDER,
-            NodeType.CONTENT_REFERENCE,
-            NodeType.MOVIES_LIST,
-            NodeType.MOVIE,
-            NodeType.MOVIE_PERSON,
-            NodeType.CAST,
-            NodeType.CREW);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MoviesCollectionTest.class);
+    @Mock
+    private TMDBCache cache;
+    @InjectMocks
+    private TMDBClient client;
+    @InjectMocks
+    private MoviesCollection collection;
 
-    public static class NodeType {
-        public static final String CONTENT_FOLDER = "jnt:contentFolder";
-        public static final String CONTENT_REFERENCE = "jnt:contentReference";
-        public static final String MOVIE ="jnt:movie";
-        public static final String MOVIES_LIST = "jnt:moviesList";
-        public static final String MOVIE_PERSON = "jnt:moviePerson";
-        public static final String CAST = "jnt:cast";
-        public static final String CREW = "jnt:crew";
+    private List<Element> elements = new ArrayList<>();
+
+    @BeforeEach
+    public void setUp() {
+        collection = new MoviesCollection();
+        client = new TMDBClient();
+        MockitoAnnotations.initMocks(this);
+        client.start(new TestConfig());
     }
 
-    public static class Property {
-        public static final String POSTER_PATH = "poster_path";
-        public static final String IMAGES = "images";
-        public static final String BASE_URL = "base_url";
+    @Test
+    public void testListMovies() {
+        List<ProviderData> data = collection.list("2024", "04", "fr");
+        LOGGER.info("Movies: {}", data);
     }
 
 }

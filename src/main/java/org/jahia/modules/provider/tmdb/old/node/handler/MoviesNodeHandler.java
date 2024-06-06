@@ -21,18 +21,7 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item.mapper;
-
-import org.jahia.api.Constants;
-import org.jahia.modules.external.ExternalData;
-import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.helper.PathBuilder;
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
-
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+package org.jahia.modules.provider.tmdb.old.node.handler;
 
 /**
  * Handler for movies node.
@@ -40,9 +29,10 @@ import java.util.stream.IntStream;
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/movies$", idPattern = "^movies$", supportedNodeType = {Naming.NodeType.CONTENT_FOLDER},
-        hasLazyProperties = false)
-public class MoviesItemMapper extends ItemMapper {
+//@NodeMapping(pathPattern = "^/movies$", idPattern = "^movies$", supportedNodeType = {Naming.NodeType.CONTENT_FOLDER},
+//        hasLazyProperties = false)
+public class MoviesNodeHandler {
+    /*
     public static final String PATH_LABEL = "movies";
     public static final String ID_PREFIX = "movies";
 
@@ -51,19 +41,28 @@ public class MoviesItemMapper extends ItemMapper {
             .rangeClosed(Calendar.getInstance().get(Calendar.YEAR) - 10, Calendar.getInstance().get(Calendar.YEAR))
             .mapToObj(Integer::toString)
             .collect(Collectors.toList());
+    private static ExternalData NODE;
+    {
+        Map<String, String[]> properties = new HashMap<>();
+        properties.put(Constants.JCR_TITLE, new String[] { PATH_LABEL });
+        String path = new PathBuilder(PATH_LABEL).build();
+        NODE = new ExternalData(ID_PREFIX, path, Naming.NodeType.CONTENT_FOLDER, properties);
+    }
 
-    public MoviesItemMapper() {
+    public MoviesNodeHandler() {
     }
 
     @Override public List<String> listChildren(String path) {
         return CHILDREN;
     }
 
+    @Override public List<ExternalData> listChildrenNodes(String path) {
+        // ${TODO} Use the discover API to get the movies for the month
+        return null;
+    }
+
     @Override public ExternalData getData(String identifier) {
-        Map<String, String[]> properties = new HashMap<>();
-        properties.put(Constants.JCR_TITLE, new String[] { PATH_LABEL });
-        String path = new PathBuilder(PATH_LABEL).build();
-        return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
+        return NODE;
     }
 
     @Override public String getIdFromPath(String path) {
@@ -73,4 +72,10 @@ public class MoviesItemMapper extends ItemMapper {
     @Override public String getPathLabel() {
         return PATH_LABEL;
     }
+
+    private String buildChildrenPath(String child) {
+        return new PathBuilder(PATH_LABEL).append(child).build();
+    }
+
+     */
 }

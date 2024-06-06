@@ -21,48 +21,40 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item;
-
-import info.movito.themoviedbapi.TmdbApi;
-import net.sf.ehcache.Cache;
-import org.jahia.modules.provider.tmdb.helper.PathHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.stream.Collectors;
+package org.jahia.modules.provider.tmdb.old.node;
 
 /**
  * Load all ItemMapper and find the right one based on path or id
  *
  * @author Jerome Blanchard
  */
-public class ItemMapperProvider {
+public class NodeHandlerProvider {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ItemMapperProvider.class);
-    private final Map<Class<? extends ItemMapper>, ItemMapper> mappers;
-    private final Map<ItemMapperDescriptor, Class<? extends ItemMapper>> descriptors;
+    /*
+    private static final Logger LOGGER = LoggerFactory.getLogger(NodeHandlerProvider.class);
+    private final Map<Class<? extends NodeMapperOld>, NodeMapperOld> mappers;
+    private final Map<NodeMapping, Class<? extends NodeMapperOld>> descriptors;
     private boolean initialized = false;
 
     private static class ItemMapperRegistryHolder {
-        private final static ItemMapperProvider INSTANCE = new ItemMapperProvider();
+        private final static NodeHandlerProvider INSTANCE = new NodeHandlerProvider();
     }
 
-    private ItemMapperProvider() {
+    private NodeHandlerProvider() {
         mappers = new HashMap<>();
         descriptors = new HashMap<>();
     }
 
-    public static ItemMapperProvider getInstance() {
+    public static NodeHandlerProvider getInstance() {
         return ItemMapperRegistryHolder.INSTANCE;
     }
 
-    public synchronized ItemMapperProvider initialize(Cache cache, TmdbApi apiClient) {
+    public synchronized NodeHandlerProvider initialize(Cache cache, TmdbApi apiClient) {
         LOGGER.debug("Initializing ItemMapperProvider");
         if (!initialized) {
-            ServiceLoader<ItemMapper> loader = ServiceLoader.load(ItemMapper.class, this.getClass().getClassLoader());
+            ServiceLoader<NodeMapperOld> loader = ServiceLoader.load(NodeMapperOld.class, this.getClass().getClassLoader());
             loader.forEach(n -> {
-                ItemMapperDescriptor descriptor = n.getClass().getAnnotation(ItemMapperDescriptor.class);
+                NodeMapping descriptor = n.getClass().getAnnotation(NodeMapping.class);
                 if (descriptor != null) {
                     descriptors.put(descriptor, n.getClass());
                     mappers.put(n.getClass(), n.withCache(cache).withApiClient(apiClient));
@@ -74,27 +66,33 @@ public class ItemMapperProvider {
         return this;
     }
 
-    public Optional<ItemMapper> findByPath(String path) {
+    public Optional<NodeMapperOld> findByPathLabel(String pathLabel) {
+        return mappers.values().stream().filter(e -> e.getPathLabel().equals(pathLabel)).findFirst();
+    }
+
+    public Optional<NodeMapperOld> findByPath(String path) {
         PathHelper.ensureValidity(path);
-        Optional<ItemMapperDescriptor> descriptor = descriptors.keySet().stream().filter(e -> path.matches(e.pathPattern())).findFirst();
+        Optional<NodeMapping> descriptor = descriptors.keySet().stream().filter(e -> path.matches(e.pathPattern())).findFirst();
         return descriptor.map(i -> mappers.get(descriptors.get(i)));
     }
 
-    public Optional<ItemMapper> findByPathForProps(String path) {
+    public Optional<NodeMapperOld> findByPathForProps(String path) {
         PathHelper.ensureValidity(path);
-        Optional<ItemMapperDescriptor> descriptor =
+        Optional<NodeMapping> descriptor =
                 descriptors.keySet().stream().filter(e -> e.hasLazyProperties() && path.matches(e.pathPattern())).findFirst();
         return descriptor.map(i -> mappers.get(descriptors.get(i)));
     }
 
-    public Optional<ItemMapper> findById(String id) {
-        Optional<ItemMapperDescriptor> descriptor = descriptors.keySet().stream().filter(e -> id.matches(e.idPattern())).findFirst();
+    public Optional<NodeMapperOld> findById(String id) {
+        Optional<NodeMapping> descriptor = descriptors.keySet().stream().filter(e -> id.matches(e.idPattern())).findFirst();
         return descriptor.map(i -> mappers.get(descriptors.get(i)));
     }
 
-    public List<ItemMapper> listForType(String type) {
-        Set<ItemMapperDescriptor> descriptors =
+    public List<NodeMapperOld> listForType(String type) {
+        Set<NodeMapping> descriptors =
                 this.descriptors.keySet().stream().filter(e -> Arrays.asList(e.supportedNodeType()).contains(type)).collect(Collectors.toSet());
         return descriptors.stream().map(i -> mappers.get(this.descriptors.get(i))).collect(Collectors.toList());
     }
+
+     */
 }

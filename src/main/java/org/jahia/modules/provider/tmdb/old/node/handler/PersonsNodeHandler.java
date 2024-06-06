@@ -21,41 +21,43 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item.mapper;
-
-import org.jahia.api.Constants;
-import org.jahia.modules.external.ExternalData;
-import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.helper.PathBuilder;
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
-
-import java.util.*;
+package org.jahia.modules.provider.tmdb.old.node.handler;
 
 /**
  * Handler for persons node.
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/persons$", idPattern = "^persons$", supportedNodeType = {Naming.NodeType.CONTENT_FOLDER},
-        hasLazyProperties = false)
-public class PersonsItemMapper extends ItemMapper {
+//@NodeMapping(pathPattern = "^/persons$", idPattern = "^persons$", supportedNodeType =
+//        {Naming.NodeType.CONTENT_FOLDER},
+ //       hasLazyProperties = false)
+public class PersonsNodeHandler {
+    /*
 
     public static final String PATH_LABEL = "persons";
     public static final String ID_PREFIX = "persons";
+    private static ExternalData NODE;
+    {
+        Map<String, String[]> properties = new HashMap<>();
+        properties.put(Constants.JCR_TITLE, new String[] { PATH_LABEL });
+        String path = new PathBuilder(PATH_LABEL).build();
+        NODE = new ExternalData(ID_PREFIX, path, Naming.NodeType.CONTENT_FOLDER, properties);
+    }
 
-    public PersonsItemMapper() {
+    public PersonsNodeHandler() {
     }
 
     @Override public List<String> listChildren(String path) {
         return Collections.emptyList();
     }
 
+    @Override
+    public List<ExternalData> listChildrenNodes(String path) {
+        return Collections.emptyList();
+    }
+
     @Override public ExternalData getData(String identifier) {
-        Map<String, String[]> properties = new HashMap<>();
-        properties.put(Constants.JCR_TITLE, new String[] {PATH_LABEL});
-        String path = new PathBuilder(PATH_LABEL).build();
-        return new ExternalData(identifier, path, Naming.NodeType.CONTENT_FOLDER, properties);
+        return NODE;
     }
 
     @Override public String getIdFromPath(String path) {
@@ -65,4 +67,6 @@ public class PersonsItemMapper extends ItemMapper {
     @Override public String getPathLabel() {
         return PATH_LABEL;
     }
+
+     */
 }

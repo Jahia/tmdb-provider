@@ -21,20 +21,19 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item;
+package org.jahia.modules.provider.tmdb.data;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface ItemMapperDescriptor {
-
-    String pathPattern();
-    String idPattern();
-    String[] supportedNodeType();
-    boolean hasLazyProperties();
-
+/**
+ * Item Mapper goal is to retrieve items and properties from an external collection and map them to Jahia structure : ExternalData.
+ * The information used to retrieve the items an identifier.
+ * An idPattern is used to identify the mapper that can handle an identifier.
+ * It is used by NodeHandlers to retrieve items from the external collection.
+ * It is supposed to have an efficient cache system depending on the external data retrieval
+ *
+ * @author Jerome Blanchard
+ */
+public interface ProviderDataCollection {
+    
+    ProviderData getData(String identifier);
+    
 }

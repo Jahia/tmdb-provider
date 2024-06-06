@@ -21,44 +21,32 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.item.mapper;
-
-import info.movito.themoviedbapi.model.people.PersonDb;
-import info.movito.themoviedbapi.tools.TmdbException;
-import net.sf.ehcache.Element;
-import org.apache.commons.lang.StringUtils;
-import org.jahia.modules.external.ExternalData;
-import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.helper.PathBuilder;
-import org.jahia.modules.provider.tmdb.helper.PathHelper;
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-import org.jahia.modules.provider.tmdb.item.ItemMapperDescriptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+package org.jahia.modules.provider.tmdb.old.node.handler;
 
 /**
  * Short description of the class
  *
  * @author Jerome Blanchard
  */
-@ItemMapperDescriptor(pathPattern = "^/persons/\\d+$", idPattern = "^person-\\d+$", supportedNodeType = {Naming.NodeType.MOVIE_PERSON},
-        hasLazyProperties = false)
-public class PersonItemMapper extends ItemMapper {
+//@NodeMapping(pathPattern = "^/persons/\\d+$", idPattern = "^person-\\d+$", supportedNodeType = {Naming.NodeType.MOVIE_PERSON},
+//        hasLazyProperties = false)
+public class PersonNodeHandler {
+    /*
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PersonItemMapper.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PersonNodeHandler.class);
     public static final String PATH_LABEL = "person";
     public static final String ID_PREFIX = "person-";
     public static final String CACHE_PREFIX = "person-";
 
-    public PersonItemMapper() {
+    public PersonNodeHandler() {
     }
 
     @Override public List<String> listChildren(String path) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<ExternalData> listChildrenNodes(String path) {
         return Collections.emptyList();
     }
 
@@ -90,7 +78,7 @@ public class PersonItemMapper extends ItemMapper {
                 if (StringUtils.isNotEmpty(person.getDeathDay()) && !person.getDeathDay().equals("null")) {
                     properties.put("deathday", new String[] { person.getDeathDay() + "T00:00:00.000+00:00" });
                 }
-                String path = new PathBuilder(PersonsItemMapper.PATH_LABEL).append(pid).build();
+                String path = new PathBuilder(PersonsNodeHandler.PATH_LABEL).append(pid).build();
                 ExternalData data = new ExternalData(identifier, path, Naming.NodeType.MOVIE_PERSON, properties);
                 getCache().put(new Element(CACHE_PREFIX + pid, data));
                 return data;
@@ -108,4 +96,6 @@ public class PersonItemMapper extends ItemMapper {
     @Override public String getPathLabel() {
         return PATH_LABEL;
     }
+
+     */
 }

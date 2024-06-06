@@ -21,42 +21,24 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.helper;
+package org.jahia.modules.provider.tmdb;
 
-import com.google.common.collect.Sets;
-
-import java.util.Set;
+import java.lang.annotation.Annotation;
 
 /**
- * Global naming for some variables
- *
  * @author Jerome Blanchard
  */
-public class Naming {
+class TestConfig implements TMDBDataSourceConfig {
 
-    public static final Set<String> NODE_TYPES = Sets.newHashSet(
-            NodeType.CONTENT_FOLDER,
-            NodeType.CONTENT_REFERENCE,
-            NodeType.MOVIES_LIST,
-            NodeType.MOVIE,
-            NodeType.MOVIE_PERSON,
-            NodeType.CAST,
-            NodeType.CREW);
-
-    public static class NodeType {
-        public static final String CONTENT_FOLDER = "jnt:contentFolder";
-        public static final String CONTENT_REFERENCE = "jnt:contentReference";
-        public static final String MOVIE ="jnt:movie";
-        public static final String MOVIES_LIST = "jnt:moviesList";
-        public static final String MOVIE_PERSON = "jnt:moviePerson";
-        public static final String CAST = "jnt:cast";
-        public static final String CREW = "jnt:crew";
+    @Override public String apiKey() {
+        return "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyN2Q3MWViNzU3ZmNkZDY1NTk1OTYwM2RlYzQxNWZkMyIsInN1YiI6IjY2NDQ1ZmQ2N2EwYTk1MzIzYWVjM2YxNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.GUoWlbqEtU3e8Btf2yTh1cGosGJE-63IKrASY2D8JgE";
     }
 
-    public static class Property {
-        public static final String POSTER_PATH = "poster_path";
-        public static final String IMAGES = "images";
-        public static final String BASE_URL = "base_url";
+    @Override public String mountPoint() {
+        return "/dummy";
     }
 
+    @Override public Class<? extends Annotation> annotationType() {
+        return null;
+    }
 }

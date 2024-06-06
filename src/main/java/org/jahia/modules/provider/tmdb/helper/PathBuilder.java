@@ -23,8 +23,6 @@
  */
 package org.jahia.modules.provider.tmdb.helper;
 
-import org.jahia.modules.provider.tmdb.item.ItemMapper;
-
 /**
  * @author Jerome Blanchard
  */
@@ -43,11 +41,6 @@ public class PathBuilder {
         this.append(path);
     }
 
-    public PathBuilder(ItemMapper mapper) {
-        this();
-        this.append(mapper.getPathLabel());
-    }
-
     public PathBuilder append(String path) {
         if (!path.startsWith(PATH_SEPARATOR)) {
             builder.append(PATH_SEPARATOR);
@@ -59,11 +52,6 @@ public class PathBuilder {
     public PathBuilder append(int id) {
         builder.append(PATH_SEPARATOR);
         builder.append(id);
-        return this;
-    }
-
-    public PathBuilder append(ItemMapper mapper) {
-        this.append(mapper.getPathLabel());
         return this;
     }
 
