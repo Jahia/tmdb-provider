@@ -32,6 +32,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -53,6 +54,11 @@ public class MoviesNode implements NodeBinding {
     private YearsCollection years;
 
     public MoviesNode() {
+    }
+
+    @Override
+    public List<String> getSupportedNodeTypes() {
+        return Collections.emptyList();
     }
 
     @Override

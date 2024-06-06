@@ -33,6 +33,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,11 +48,16 @@ import java.util.stream.Collectors;
 public class YearsNode implements NodeBinding {
 
     private static final String PATH_PATTERN = "^/movies/\\d{4}$";
-    private static final String ID_PATTERN = "^year-\\d{4}$";
+    private static final String ID_PATTERN = "^" + YearsCollection.ID_PREFIX + "\\d{4}$";
     @Reference
     private YearsCollection years;
     @Reference
     private MonthsCollection months;
+
+    @Override
+    public List<String> getSupportedNodeTypes() {
+        return Collections.emptyList();
+    }
 
     @Override
     public String getPathPattern() {

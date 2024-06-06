@@ -34,6 +34,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -52,6 +53,11 @@ public class MonthsNode implements NodeBinding {
     private MonthsCollection months;
     @Reference
     private MoviesCollection movies;
+
+    @Override
+    public List<String> getSupportedNodeTypes() {
+        return Collections.emptyList();
+    }
 
     @Override
     public String getPathPattern() {

@@ -23,6 +23,10 @@
  */
 package org.jahia.modules.provider.tmdb.old.node.handler;
 
+import org.jahia.api.Constants;
+
+import java.util.Set;
+
 /**
  * @author Jerome Blanchard
  */

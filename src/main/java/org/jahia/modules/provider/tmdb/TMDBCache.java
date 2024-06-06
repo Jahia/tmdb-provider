@@ -42,10 +42,13 @@ public class TMDBCache {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TMDBCache.class);
     private static final String CACHE_NAME = "tmdb";
-
-    @Reference
     private CacheProvider cacheProvider;
     private Cache cache;
+
+    @Reference
+    public void setCacheProvider(CacheProvider cacheProvider) {
+        this.cacheProvider = cacheProvider;
+    }
 
     @Activate
     public void start() {

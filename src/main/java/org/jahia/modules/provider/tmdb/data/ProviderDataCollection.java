@@ -35,5 +35,5 @@ package org.jahia.modules.provider.tmdb.data;
 public interface ProviderDataCollection {
     
     ProviderData getData(String identifier);
-    
+
 }

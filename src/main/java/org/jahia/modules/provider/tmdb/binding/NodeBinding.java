@@ -24,8 +24,10 @@
 package org.jahia.modules.provider.tmdb.binding;
 
 import org.jahia.modules.external.ExternalData;
+import org.jahia.modules.external.ExternalQuery;
 import org.jahia.modules.provider.tmdb.data.ProviderData;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -41,15 +43,9 @@ public interface NodeBinding {
     String findNodeId(String path);
     ExternalData getData(String identifier);
     String[] getProperty(String identifier, String lang, String propertyName);
-
-    /*
-    public List<String> search(String nodeType, ExternalQuery query) throws RepositoryException {
+    List<String> getSupportedNodeTypes() ;
+    default List<String> search(String nddeType, ExternalQuery query) {
         return Collections.emptyList();
     }
-
-    public String[] getProperty(String identifier, String lang, String propertyName) {
-        return new String[] {};
-    }
-    */
 
 }

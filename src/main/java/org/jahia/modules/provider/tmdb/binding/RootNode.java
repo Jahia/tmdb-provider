@@ -24,6 +24,7 @@
 package org.jahia.modules.provider.tmdb.binding;
 
 import org.jahia.modules.external.ExternalData;
+import org.jahia.modules.external.ExternalQuery;
 import org.jahia.modules.provider.tmdb.data.CategoriesCollection;
 import org.jahia.modules.provider.tmdb.data.ProviderData;
 import org.jahia.modules.provider.tmdb.helper.PathBuilder;
@@ -31,6 +32,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -48,6 +50,11 @@ public class RootNode implements NodeBinding {
     private CategoriesCollection categories;
 
     public RootNode() {
+    }
+
+    @Override
+    public List<String> getSupportedNodeTypes() {
+        return Collections.emptyList();
     }
 
     @Reference

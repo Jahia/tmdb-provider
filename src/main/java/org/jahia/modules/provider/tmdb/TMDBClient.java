@@ -44,9 +44,9 @@ public class TMDBClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TMDBClient.class);
     private static final String TMDB_CONFIG_CACHE_KEY = "configuration";
-    @Reference
     private TMDBCache cache;
     private TmdbApi client;
+
 
     @Activate
     public void start(TMDBDataSourceConfig config) {
@@ -69,11 +69,18 @@ public class TMDBClient {
         LOGGER.info("TMDBClient stopped");
     }
 
+    @Reference
+    public void setCache(TMDBCache cache) {
+        this.cache = cache;
+    }
+
     public Configuration getConfiguration() throws TmdbException {
-        if (cache.get(TMDB_CONFIG_CACHE_KEY) == null) {
-            cache.put(new Element(TMDB_CONFIG_CACHE_KEY, client.getConfiguration().getDetails()));
+        if (cache.get(TMDB_CONFIG_CACHE_KEY) != null) {
+            return (Configuration) cache.get(TMDB_CONFIG_CACHE_KEY).getObjectValue();
         }
-        return (Configuration) cache.get(TMDB_CONFIG_CACHE_KEY).getObjectValue();
+        Configuration configuration = client.getConfiguration().getDetails();
+        cache.put(new Element(TMDB_CONFIG_CACHE_KEY, configuration));
+        return configuration;
     }
 
     public TmdbDiscover getDiscover() {

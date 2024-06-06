@@ -55,6 +55,11 @@ public class GenreNode implements NodeBinding {
     }
 
     @Override
+    public List<String> getSupportedNodeTypes() {
+        return Collections.emptyList();
+    }
+
+    @Override
     public String getPathPattern() {
         return PATH_PATTERN;
     }

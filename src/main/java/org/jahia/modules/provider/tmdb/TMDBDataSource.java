@@ -186,10 +186,10 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
             LOGGER.info("search for query: " + query);
             List<String> results = new ArrayList<>();
             String nodeType = QueryHelper.getNodeType(query.getSource());
-            //List<NodeHandler> nodeHandlers = mapperProvider.listForType(nodeType);
-            //for (NodeHandler mapper : nodeHandlers) {
-            //    results.addAll(mapper.search(nodeType, query));
-            //}
+            List<NodeBinding> bindings = mapperFactory.findNodeBindingForNodeType(nodeType);
+            for (NodeBinding binding : bindings) {
+                results.addAll(binding.search(nodeType, query));
+            }
             return results;
         } catch (RepositoryException e) {
             throw new PathNotFoundException("Error while searching item for query " + query, e);

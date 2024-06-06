@@ -29,18 +29,24 @@ import info.movito.themoviedbapi.model.movies.MovieDb;
 import info.movito.themoviedbapi.tools.TmdbException;
 import info.movito.themoviedbapi.tools.appendtoresponse.MovieAppendToResponse;
 import info.movito.themoviedbapi.tools.builders.discover.DiscoverMovieParamBuilder;
+import info.movito.themoviedbapi.tools.sortby.DiscoverMovieSortBy;
 import net.sf.ehcache.Element;
 import org.apache.commons.lang.StringUtils;
 import org.jahia.api.Constants;
+import org.jahia.modules.external.ExternalQuery;
+import org.jahia.modules.external.query.QueryHelper;
 import org.jahia.modules.provider.tmdb.TMDBCache;
 import org.jahia.modules.provider.tmdb.TMDBClient;
 import org.jahia.modules.provider.tmdb.helper.Naming;
+import org.jahia.modules.provider.tmdb.helper.PathBuilder;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.jcr.RepositoryException;
+import javax.jcr.Value;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -52,99 +58,217 @@ public class MoviesCollection implements ProviderDataCollection {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MoviesCollection.class);
     private static final String LIST_ID_CACHE_KEY = "movie-list-";
-    public static final String CAST = "cast_";
-    public static final String CREW = "crew_";
     public static final Set<String> LAZY_PROPERTIES = Set.of("original_title", "homepage", "status", "runtime", "imdb_id", "budget",
             "revenue", "genres", "keywords");
     public static final Set<String> LAZY_I18N_PROPERTIES = Set.of(Constants.JCR_TITLE, "overview", "tagline", "poster_path");
     public static final String ID_PREFIX = "movie-";
+    private TMDBClient client;
+    private TMDBCache cache;
 
     @Reference
-    private TMDBClient client;
+    public void setClient(TMDBClient client) {
+        this.client = client;
+    }
+
     @Reference
-    private TMDBCache cache;
+    public void setCache(TMDBCache cache) {
+        this.cache = cache;
+    }
 
     @Override
     public ProviderData getData(String identifier) {
+        return getData(identifier, "en", false);
+    }
+
+    public ProviderData getData(String identifier, String language, boolean withLazyProperties) {
         Element element = cache.get(identifier);
+        ProviderData cachedData = null;
         if (element != null) {
-            return (ProviderData) element.getObjectValue();
-        } else {
-            try {
-                Integer mid = Integer.parseInt(identifier.substring(ID_PREFIX.length()));
-                MovieDb movie = client.getMovies().getDetails(mid, "en", MovieAppendToResponse.KEYWORDS);
-                ProviderData data = map(movie, "en");
-                cache.put(new Element(identifier, data));
-                return data;
-            } catch (Exception e) {
-                LOGGER.warn("Error while getting movie " + identifier, e);
-                return null;
+            cachedData = (ProviderData) element.getObjectValue();
+            if (!withLazyProperties && cachedData.hasLanguage(language)) {
+                return cachedData;
             }
+            if (withLazyProperties && cachedData.hasProperty("runtime")) {
+                if (cachedData.hasLanguage(language) && cachedData.hasProperty(language, "tagline")) {
+                    return cachedData;
+                }
+            }
+        }
+        try {
+            int mid = Integer.parseInt(identifier.substring(ID_PREFIX.length()));
+            MovieDb movie = client.getMovies().getDetails(mid, language, MovieAppendToResponse.KEYWORDS);
+            ProviderData data = map(movie, language, cachedData);
+            cache.put(new Element(identifier, data));
+            return data;
+        } catch (Exception e) {
+            LOGGER.warn("Error while getting movie " + identifier, e);
+            return null;
         }
     }
 
     public List<ProviderData> list(String year, String month, String originLang) {
         DiscoverMovieParamBuilder builder = getBuilder(year, month, originLang);
         Element element = cache.get(LIST_ID_CACHE_KEY);
+        List<String> ids = new ArrayList<>();
         if (element != null) {
-            List<String> ids = (List<String>) element.getObjectValue();
-            return ids.stream().map(this::getData).collect(Collectors.toList());
+            ids = (List<String>) element.getObjectValue();
         } else {
             try {
-                List<ProviderData> results = new ArrayList<>();
-                List<String> ids = new ArrayList<>();
                 MovieResultsPage page;
                 do {
                     page = client.getDiscover().getMovie(builder);
                     ids.addAll(page.getResults().stream().map(m -> ID_PREFIX + m.getId()).collect(Collectors.toList()));
-                    page.getResults().stream().map(this::map).filter(Objects::nonNull).forEach(this::cache);
+                    page.getResults().stream().map(m -> this.map(m, "en") ).filter(Objects::nonNull).forEach(this::cache);
                     builder.page(page.getPage() + 1);
                 } while (page.getPage() < page.getTotalPages());
                 cache.put(new Element(LIST_ID_CACHE_KEY, ids));
-                return ids.stream().map(this::getData).filter(Objects::nonNull).collect(Collectors.toList());
             } catch (Exception e) {
                 LOGGER.warn("Error while getting movies ", e);
                 return Collections.emptyList();
             }
         }
+        return ids.stream().map(this::getData).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    protected ProviderData map(MovieDb movie, String language) {
-        //TODO add all lazy properties in cache (not the i18n ones)
-        return this.map(movie.getId(), movie.getAdult(), movie.getVoteAverage(), movie.getVoteCount(), movie.getPopularity(),
-                movie.getBackdropPath(), movie.getReleaseDate());
+    public List<ProviderData> searchByTitle(String title, String lang, long limit) {
+        List<String> ids = new ArrayList<>();
+        try {
+            MovieResultsPage page;
+            int pageNb = 1;
+            do {
+                page = client.getSearch().searchMovie(title, false, lang,null, pageNb, null, null);
+                ids.addAll(page.getResults().stream().map(m -> ID_PREFIX + m.getId()).collect(Collectors.toList()));
+                page.getResults().stream().filter(m -> !this.isCached(ID_PREFIX + m.getId()))
+                        .map(m -> this.map(m, lang) ).filter(Objects::nonNull).forEach(this::cache);
+                pageNb++;
+            } while (page.getPage() < page.getTotalPages() || ids.size() < limit);
+        } catch (TmdbException e) {
+            LOGGER.warn("Error while searching movie by title", e);
+        }
+        return ids.stream().map(this::getData).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    protected ProviderData map(Movie movie) {
-        return this.map(movie.getId(), movie.getAdult(), movie.getVoteAverage(), movie.getVoteCount(), movie.getPopularity(),
-                movie.getBackdropPath(), movie.getReleaseDate());
+    public List<ProviderData> discover(long offset, long limit) {
+        List<String> ids = new ArrayList<>();
+        try {
+            MovieResultsPage page;
+            DiscoverMovieParamBuilder builder = new DiscoverMovieParamBuilder();
+            builder.sortBy(DiscoverMovieSortBy.POPULARITY_DESC);
+            builder.page((int) Math.max(1, offset / limit));
+            do {
+                page = client.getDiscover().getMovie(builder);
+                ids.addAll(page.getResults().stream().map(m -> ID_PREFIX + m.getId()).collect(Collectors.toList()));
+                page.getResults().stream().filter(m -> !this.isCached(ID_PREFIX + m.getId()))
+                        .map(m -> this.map(m, "en") ).filter(Objects::nonNull).forEach(this::cache);
+                builder.page(page.getPage() + 1);
+            } while (page.getPage() < page.getTotalPages() || ids.size() < limit || ids.size() < 200);
+        } catch (TmdbException e) {
+            LOGGER.warn("Error while discovering movie", e);
+        }
+        return ids.stream().map(this::getData).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    private ProviderData map(Integer id, boolean adult, double voteAverage, int voteCount, double popularity, String backdropPath, String date) {
+    protected ProviderData map(Movie movie, String language) {
+        return this.map(language, movie.getId(), movie.getOriginalTitle(), movie.getAdult(), movie.getVoteAverage(), movie.getVoteCount(),
+                movie.getPopularity(), movie.getBackdropPath(), movie.getReleaseDate(), movie.getOverview(), movie.getPosterPath(),
+                movie.getTitle());
+    }
+
+    protected ProviderData map(MovieDb movie, String language, ProviderData existingData) {
+        ProviderData data = this.map(language, movie.getId(), movie.getOriginalTitle(), movie.getAdult(), movie.getVoteAverage(),
+                movie.getVoteCount(), movie.getPopularity(), movie.getBackdropPath(), movie.getReleaseDate(), movie.getOverview(),
+                movie.getPosterPath(), movie.getTitle());
+        if (data != null) {
+            data.withProperty("runtime", new String[] { Integer.toString(movie.getRuntime()) });
+            data.withProperty("homepage", new String[] { movie.getHomepage() });
+            data.withProperty("status", new String[] { movie.getStatus() });
+            data.withProperty("imdb_id", new String[] { movie.getImdbID() });
+            data.withProperty("budget", new String[] { Integer.toString(movie.getBudget()) });
+            data.withProperty("revenue", new String[] { Long.toString(movie.getRevenue()) });
+            data.withProperty("spoken_languages",
+                    movie.getSpokenLanguages().stream().map(l -> l.getName()).collect(Collectors.toList()).toArray(new String[0]));
+            data.withProperty("production_companies",
+                    movie.getProductionCompanies().stream().map(c -> c.getName()).collect(Collectors.toList()).toArray(new String[0]));
+            List<String> tags = new ArrayList<>();
+            if (!movie.getGenres().isEmpty()) {
+                tags.addAll(movie.getGenres().stream().map(g -> g.getName()).collect(Collectors.toList()));
+            }
+            if (!movie.getKeywords().getKeywords().isEmpty()) {
+                tags.addAll(movie.getKeywords().getKeywords().stream().map(g -> g.getName()).collect(Collectors.toList()));
+            }
+            data.withProperty("j:tagList", tags.toArray(new String[0]));
+            data.withProperty(language, "tagline", new String[] { movie.getTagline() });
+            if (existingData != null) {
+                data.getI18nProperties().putAll(existingData.getI18nProperties());
+            }
+        }
+        return data;
+    }
+
+    private ProviderData map(String language, Integer id, String originalTitle, boolean adult, double voteAverage, int voteCount,
+            double popularity, String backdropPath, String date, String overview, String posterPath, String title) {
         try {
             String baseUrl = client.getConfiguration().getImageConfig().getBaseUrl();
-            Map<String, String[]> properties = new HashMap<>();
+            ProviderData data = new ProviderData().withId(ID_PREFIX + id).withType(Naming.NodeType.MOVIE).withName(originalTitle);
             if (StringUtils.isNotEmpty(backdropPath)) {
                 String backdropSize = client.getConfiguration().getImageConfig().getBackdropSizes().get(1);
-                properties.put("backdrop_path", new String[] { baseUrl.concat(backdropSize).concat(backdropPath) });
+                data.withProperty("backdrop_path", new String[] { baseUrl.concat(backdropSize).concat(backdropPath) });
             }
             if (StringUtils.isNotEmpty(date)) {
-                properties.put("release_date", new String[] { date + "T00:00:00.000+00:00" });
+                data.withProperty("release_date", new String[] { date + "T00:00:00.000+00:00" });
             }
-            properties.put("adult", new String[] { Boolean.toString(adult) });
-            properties.put("vote_average", new String[] { Double.toString(voteAverage) });
-            properties.put("vote_count", new String[] { Integer.toString(voteCount) });
-            properties.put("popularity", new String[] { Double.toString(popularity) });
-            //TODO add genres as keywords
-            return new ProviderData(ID_PREFIX + id, Naming.NodeType.CONTENT_FOLDER, Integer.toString(id), properties);
+            data.withProperty("adult", new String[] { Boolean.toString(adult) });
+            data.withProperty("vote_average", new String[] { Double.toString(voteAverage) });
+            data.withProperty("vote_count", new String[] { Integer.toString(voteCount) });
+            data.withProperty("popularity", new String[] { Double.toString(popularity) });
+            if (StringUtils.isNotEmpty(originalTitle) && !originalTitle.equals("null")) {
+                data.withProperty("original_title", new String[] { overview });
+            }
+            if (StringUtils.isNotEmpty(overview) && !overview.equals("null")) {
+                data.withProperty(language, "overview", new String[] { overview });
+            }
+            if (StringUtils.isNotEmpty(posterPath) && !posterPath.equals("null")) {
+                String posterSize = client.getConfiguration().getImageConfig().getPosterSizes().get(1);
+                data.withProperty(language, "poster_path", new String[] { baseUrl.concat(posterSize).concat(posterPath) });
+            }
+            if (StringUtils.isNotEmpty(title) && !title.equals("null")) {
+                data.withProperty(language, Constants.JCR_TITLE, new String[] {title});
+            }
+            return data;
         } catch (TmdbException e) {
             return null;
         }
     }
 
-    private void cache(ProviderData data) {
-        cache.put(new Element(data.getId(), data));
+    private boolean isCached(String id) {
+        return cache.get(id) != null;
     }
+
+    private void cache(ProviderData data) {
+        if (cache.get(data.getId()) == null) {
+            cache.put(new Element(data.getId(), data));
+        }
+    }
+
+    /*
+    private void notify(String mid, ExternalData data) {
+        String cacheKey = Naming.Cache.INDEXED_FULL_MOVIE_CACHE_PREFIX + mid;
+        if (getCache().get(cacheKey) == null) {
+            EventService eventService = BundleUtils.getOsgiService(EventService.class, null);
+            JCRStoreProvider jcrStoreProvider = JCRSessionFactory.getInstance().getProviders().get("TMDBProvider");
+            CompletableFuture.supplyAsync(() -> {
+                try {
+                    eventService.sendAddedNodes(Arrays.asList(data), jcrStoreProvider);
+                    getCache().put(new Element(cacheKey, "indexed"));
+                } catch (RepositoryException e) {
+                    e.printStackTrace();
+                }
+                return "eventSent";
+            });
+        }
+    }
+     */
+
 
     private DiscoverMovieParamBuilder getBuilder(String year, String month, String language) {
         Calendar instance = Calendar.getInstance();
