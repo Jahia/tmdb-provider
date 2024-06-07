@@ -54,7 +54,7 @@ public class MoviesCollection implements ProviderDataCollection {
     private static final Logger LOGGER = LoggerFactory.getLogger(MoviesCollection.class);
     private static final String LIST_ID_CACHE_KEY = "movie-list-";
     public static final Set<String> LAZY_PROPERTIES = Set.of("original_title", "homepage", "status", "runtime", "imdb_id", "budget",
-            "revenue", "genres", "keywords");
+            "revenue");
     public static final Set<String> LAZY_I18N_PROPERTIES = Set.of(Constants.JCR_TITLE, "overview", "tagline", "poster_path");
     public static final String ID_PREFIX = "movie-";
     private TMDBClient client;
@@ -178,26 +178,37 @@ public class MoviesCollection implements ProviderDataCollection {
                 movie.getVoteCount(), movie.getPopularity(), movie.getBackdropPath(), movie.getReleaseDate(), movie.getOverview(),
                 movie.getPosterPath(), movie.getTitle());
         if (data != null) {
-            data.withProperty("runtime", new String[] { Integer.toString(movie.getRuntime()) });
-            data.withProperty("homepage", new String[] { movie.getHomepage() });
-            data.withProperty("status", new String[] { movie.getStatus() });
-            data.withProperty("imdb_id", new String[] { movie.getImdbID() });
-            data.withProperty("budget", new String[] { Integer.toString(movie.getBudget()) });
-            data.withProperty("revenue", new String[] { Long.toString(movie.getRevenue()) });
+            data.withProperty("runtime", new String[] { Long.toString(movie.getRuntime()) });
+            if (StringUtils.isNotEmpty(movie.getHomepage())) {
+                data.withProperty("homepage", new String[] { movie.getHomepage() });
+            } else {
+                data.withProperty("homepage", new String[] { "" });
+            }
+            if (StringUtils.isNotEmpty(movie.getStatus())) {
+                data.withProperty("status", new String[] { movie.getStatus() });
+            }
+            if (StringUtils.isNotEmpty(movie.getImdbID())) {
+                data.withProperty("imdb_id", new String[] { movie.getImdbID() });
+            }
+            data.withProperty("budget", new String[] { Long.toString(movie.getBudget()) });
+            data.withProperty("revenue", new String[] { Double.toString(movie.getRevenue()) });
             data.withProperty("spoken_languages",
                     movie.getSpokenLanguages().stream().map(l -> l.getName()).collect(Collectors.toList()).toArray(new String[0]));
             data.withProperty("production_companies",
                     movie.getProductionCompanies().stream().map(c -> c.getName()).collect(Collectors.toList()).toArray(new String[0]));
-            List<String> tags = new ArrayList<>();
             if (!movie.getGenres().isEmpty()) {
-                tags.addAll(movie.getGenres().stream().map(g -> g.getName()).collect(Collectors.toList()));
+                data.withProperty("j:tagList",
+                        movie.getGenres().stream().map(g -> g.getName()).collect(Collectors.toList()).toArray(new String[0]));
             }
             if (!movie.getKeywords().getKeywords().isEmpty()) {
-                tags.addAll(movie.getKeywords().getKeywords().stream().map(g -> g.getName()).collect(Collectors.toList()));
+                data.withProperty("j:keywords",
+                        movie.getKeywords().getKeywords().stream().map(g -> g.getName()).collect(Collectors.toList()).toArray(new String[0]));
             }
-            data.withProperty("j:tagList", tags.toArray(new String[0]));
             data.withProperty(language, "tagline", new String[] { movie.getTagline() });
             if (existingData != null) {
+                existingData.getProperties().keySet().stream().filter(k -> !data.hasProperty(k)).forEach(k -> {
+                    data.getProperties().put(k, existingData.getProperties().get(k));
+                });
                 data.getI18nProperties().putAll(existingData.getI18nProperties());
             }
         }

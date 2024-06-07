@@ -168,7 +168,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
 
     @Override public String[] getI18nPropertyValues(String path, String lang, String propertyName) throws PathNotFoundException {
         try {
-            LOGGER.info("getI18nPropertyValues for path: " + path);
+            LOGGER.debug("getI18nPropertyValues for path: " + path);
             NodeBinding mapper = mapperFactory.findNodeBindingForPath(path);
             String identifier = mapper.findNodeId(path);
             return mapper.getProperty(identifier, lang, propertyName);
