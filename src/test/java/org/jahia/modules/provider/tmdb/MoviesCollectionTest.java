@@ -96,6 +96,11 @@ public class MoviesCollectionTest {
         assertTrue(movie.hasLanguage("en"));
         assertTrue(movie.hasLanguage("fr"));
         assertTrue(movie.hasProperty("fr", "tagline"));
+
+        data = collection.list("2019", "01", "fr");
+        data = collection.list("2019", "02", "fr");
+        data = collection.list("2019", "03", "fr");
+        data = collection.list("2019", "04", "fr");
     }
 
     @Test

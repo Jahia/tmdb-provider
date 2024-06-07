@@ -53,7 +53,7 @@ import java.util.stream.Collectors;
 public class PersonsCollection implements ProviderDataCollection {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PersonsCollection.class);
-    public static final String ID_PREFIX = "pid-";
+    public static final String ID_PREFIX = "person-";
 
     @Reference
     private TMDBClient client;

@@ -55,4 +55,8 @@
  + rank (jnt:moviePersonRank)  = jnt:moviePersonRank autocreated
 
 [jnt:moviePersonRank] > jnt:content
-  - test (string)
+ - test (string)
+
+[jnt:movieGenre] > jnt:content, jmix:structuredContent
+  - name (string)
+

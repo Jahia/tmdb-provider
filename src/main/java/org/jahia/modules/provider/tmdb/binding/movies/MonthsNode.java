@@ -23,16 +23,18 @@
  */
 package org.jahia.modules.provider.tmdb.binding.movies;
 
+import info.movito.themoviedbapi.TmdbApi;
+import org.apache.commons.lang.StringUtils;
 import org.jahia.modules.external.ExternalData;
+import org.jahia.modules.provider.tmdb.TMDBDataSourceConfig;
 import org.jahia.modules.provider.tmdb.binding.NodeBinding;
+import org.jahia.modules.provider.tmdb.client.TMDBApacheUrlReader;
 import org.jahia.modules.provider.tmdb.data.MonthsCollection;
 import org.jahia.modules.provider.tmdb.data.MoviesCollection;
 import org.jahia.modules.provider.tmdb.data.ProviderData;
 import org.jahia.modules.provider.tmdb.helper.PathBuilder;
 import org.jahia.modules.provider.tmdb.helper.PathHelper;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ServiceScope;
+import org.osgi.service.component.annotations.*;
 
 import java.util.Collections;
 import java.util.List;
@@ -53,6 +55,17 @@ public class MonthsNode implements NodeBinding {
     private MonthsCollection months;
     @Reference
     private MoviesCollection movies;
+    private TMDBDataSourceConfig config;
+
+    @Activate
+    public void start(TMDBDataSourceConfig config) {
+        this.config = config;
+    }
+
+    @Deactivate
+    public void stop() {
+        this.config = null;
+    }
 
     @Override
     public List<String> getSupportedNodeTypes() {
@@ -83,11 +96,11 @@ public class MonthsNode implements NodeBinding {
 
     @Override
     public List<ExternalData> listChildren(String path) {
-        List<ProviderData> child = movies.list(PathHelper.getParent(path), PathHelper.getLeaf(path), "fr");
+        List<ProviderData> child = movies.list(PathHelper.getParent(path), PathHelper.getLeaf(path), config.originalLanguage());
         return child.stream()
                 .map(data -> {
                     String moviepath = new PathBuilder(path).append(data.getId().substring(MoviesCollection.ID_PREFIX.length())).build();
-                    return data.toExternalData(moviepath, MoviesCollection.LAZY_PROPERTIES,MoviesCollection.LAZY_I18N_PROPERTIES);
+                    return data.toExternalData(moviepath, MoviesCollection.LAZY_PROPERTIES, MoviesCollection.LAZY_I18N_PROPERTIES);
                 }).collect(Collectors.toList());
     }
 

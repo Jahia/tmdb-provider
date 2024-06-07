@@ -41,4 +41,8 @@ class TestConfig implements TMDBDataSourceConfig {
     @Override public Class<? extends Annotation> annotationType() {
         return null;
     }
+
+    @Override public String originalLanguage() {
+        return "fr";
+    }
 }

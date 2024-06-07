@@ -76,9 +76,9 @@ public class CreditsNode implements NodeBinding {
     public ExternalData getData(String identifier) {
         ProviderData credit = credits.getData(identifier);
         String id = identifier.substring(CreditsCollection.ID_PREFIX.length());
-        String movieId = StringUtils.substringBefore("-", id);
-        String creditsId = StringUtils.substringAfter("-", id);
-        ProviderData data = movies.getData(identifier);
+        String movieId = StringUtils.substringBefore(id, "-");
+        String creditsId = StringUtils.substringAfter(id, "-");
+        ProviderData data = movies.getData(MoviesCollection.ID_PREFIX.concat(movieId));
         String year = "0000";
         String month = "00";
         if (data.getProperties().containsKey("release_date")) {

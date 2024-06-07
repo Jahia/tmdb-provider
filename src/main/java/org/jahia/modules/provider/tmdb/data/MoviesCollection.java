@@ -33,20 +33,15 @@ import info.movito.themoviedbapi.tools.sortby.DiscoverMovieSortBy;
 import net.sf.ehcache.Element;
 import org.apache.commons.lang.StringUtils;
 import org.jahia.api.Constants;
-import org.jahia.modules.external.ExternalQuery;
-import org.jahia.modules.external.query.QueryHelper;
 import org.jahia.modules.provider.tmdb.TMDBCache;
 import org.jahia.modules.provider.tmdb.TMDBClient;
 import org.jahia.modules.provider.tmdb.helper.Naming;
-import org.jahia.modules.provider.tmdb.helper.PathBuilder;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jcr.RepositoryException;
-import javax.jcr.Value;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -107,7 +102,6 @@ public class MoviesCollection implements ProviderDataCollection {
     }
 
     public List<ProviderData> list(String year, String month, String originLang) {
-        DiscoverMovieParamBuilder builder = getBuilder(year, month, originLang);
         String cacheKey = LIST_ID_CACHE_KEY.concat(year).concat("-").concat(month).concat("-").concat(originLang);
         Element element = cache.get(cacheKey);
         List<String> ids = new ArrayList<>();
@@ -115,13 +109,17 @@ public class MoviesCollection implements ProviderDataCollection {
             ids = (List<String>) element.getObjectValue();
         } else {
             try {
+                DiscoverMovieParamBuilder builder = getBuilder(year, month, originLang);
                 MovieResultsPage page;
                 do {
                     page = client.getDiscover().getMovie(builder);
+                    if (page.getPage() == 1 && page.getTotalResults() > 500) {
+                        LOGGER.warn("Too many movies for year {} month {}: {}", year, month, page.getTotalResults());
+                    }
                     ids.addAll(page.getResults().stream().map(m -> ID_PREFIX + m.getId()).collect(Collectors.toList()));
                     page.getResults().stream().map(m -> this.map(m, "en") ).filter(Objects::nonNull).forEach(this::cache);
                     builder.page(page.getPage() + 1);
-                } while (page.getPage() < page.getTotalPages());
+                } while (page.getPage() < page.getTotalPages() || page.getPage() >= 500);
                 cache.put(new Element(cacheKey, ids));
             } catch (Exception e) {
                 LOGGER.warn("Error while getting movies ", e);
@@ -274,12 +272,13 @@ public class MoviesCollection implements ProviderDataCollection {
     private DiscoverMovieParamBuilder getBuilder(String year, String month, String language) {
         Calendar instance = Calendar.getInstance();
         instance.set(Calendar.YEAR, Integer.parseInt(year));
-        instance.set(Calendar.MONTH, Integer.parseInt(month));
+        instance.set(Calendar.MONTH, Integer.parseInt(month)-1);
         instance.set(Calendar.DAY_OF_MONTH, 1);
-        instance.roll(Calendar.DAY_OF_MONTH, false);
-        String lastDay = Integer.toString(instance.get(Calendar.DAY_OF_MONTH));
+        String lastDay = Integer.toString(instance.getActualMaximum(Calendar.DAY_OF_MONTH));
         return new DiscoverMovieParamBuilder()
                 .withOriginalLanguage(language)
+                .includeVideo(false)
+                .includeAdult(false)
                 .primaryReleaseDateGte(year.concat("-").concat(month).concat("-01"))
                 .primaryReleaseDateLte(year.concat("-").concat(month).concat("-").concat(lastDay))
                 .page(1);

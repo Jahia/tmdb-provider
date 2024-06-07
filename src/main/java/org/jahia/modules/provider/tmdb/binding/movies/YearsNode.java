@@ -23,6 +23,7 @@
  */
 package org.jahia.modules.provider.tmdb.binding.movies;
 
+import org.apache.commons.lang.StringUtils;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.provider.tmdb.binding.NodeBinding;
 import org.jahia.modules.provider.tmdb.data.MonthsCollection;
@@ -84,7 +85,7 @@ public class YearsNode implements NodeBinding {
     public List<ExternalData> listChildren(String path) {
         String year = PathHelper.getLeaf(path);
         return months.list(year).stream()
-                .map(month -> month.toExternalData(new PathBuilder(path).append(month.getName().substring(5)).build()))
+                .map(month -> month.toExternalData(new PathBuilder(path).append(StringUtils.substringAfter(month.getName(), "-")).build()))
                 .sorted(Comparator.comparing(ExternalData::getName))
                 .collect(Collectors.toList());
     }

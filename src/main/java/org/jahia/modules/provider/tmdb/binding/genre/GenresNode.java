@@ -23,6 +23,7 @@
  */
 package org.jahia.modules.provider.tmdb.binding.genre;
 
+import org.apache.commons.lang.StringUtils;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.provider.tmdb.binding.NodeBinding;
 import org.jahia.modules.provider.tmdb.data.CategoriesCollection;
@@ -32,6 +33,8 @@ import org.jahia.modules.provider.tmdb.helper.PathBuilder;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
@@ -83,7 +86,9 @@ public class GenresNode implements NodeBinding {
 
     @Override
     public List<ExternalData> listChildren(String path) {
-        return genres.list().stream().map(g -> g.toExternalData(new PathBuilder(path).append(g.getName()).build())).collect(Collectors.toList());
+        return genres.list().stream()
+                .map(g -> g.toExternalData(new PathBuilder(path).append(StringUtils.substringAfter(g.getId(), "-")).build()))
+                .collect(Collectors.toList());
     }
 
     @Override public String[] getProperty(String identifier, String lang, String propertyName) {

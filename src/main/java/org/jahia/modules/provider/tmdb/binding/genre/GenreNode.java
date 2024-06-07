@@ -32,6 +32,8 @@ import org.jahia.modules.provider.tmdb.helper.PathHelper;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,8 +47,8 @@ import java.util.List;
 @Component(service = { GenreNode.class, NodeBinding.class}, scope = ServiceScope.SINGLETON, immediate = true)
 public class GenreNode implements NodeBinding {
 
-    private static final String PATH_PATTERN = "^/genres/[a-z0-9]+$";
-    private static final String ID_PATTERN = "^genre-\\d$";
+    private static final String PATH_PATTERN = "^/genres/\\d+$";
+    private static final String ID_PATTERN = "^gid-\\d$";
 
     @Reference
     private GenresCollection genres;
@@ -84,7 +86,9 @@ public class GenreNode implements NodeBinding {
         return Collections.emptyList();
     }
 
-    @Override public String[] getProperty(String identifier, String lang, String propertyName) {
+    @Override
+    public String[] getProperty(String identifier, String lang, String propertyName) {
         return new String[0];
     }
+
 }

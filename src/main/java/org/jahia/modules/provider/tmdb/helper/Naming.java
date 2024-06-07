@@ -40,6 +40,7 @@ public class Naming {
             NodeType.MOVIES_LIST,
             NodeType.MOVIE,
             NodeType.MOVIE_PERSON,
+            NodeType.MOVIE_GENRE,
             NodeType.CAST,
             NodeType.CREW);
 
@@ -49,14 +50,9 @@ public class Naming {
         public static final String MOVIE ="jnt:movie";
         public static final String MOVIES_LIST = "jnt:moviesList";
         public static final String MOVIE_PERSON = "jnt:moviePerson";
+        public static final String MOVIE_GENRE = "jnt:movieGenre";
         public static final String CAST = "jnt:cast";
         public static final String CREW = "jnt:crew";
-    }
-
-    public static class Property {
-        public static final String POSTER_PATH = "poster_path";
-        public static final String IMAGES = "images";
-        public static final String BASE_URL = "base_url";
     }
 
 }

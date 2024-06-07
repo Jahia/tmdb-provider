@@ -153,4 +153,9 @@ public class ProviderData implements Serializable {
         data.setLazyI18nProperties(Map.of("en", new HashSet<>(lazyI18nProps), "fr", new HashSet<>(lazyI18nProps)));
         return data;
     }
+
+    @Override public String toString() {
+        return "ProviderData{" + "id='" + id + '\'' + ", type='" + type + '\'' + ", name='" + name + '\'' + ", properties=" + properties
+                + ", i18nProperties=" + i18nProperties + '}';
+    }
 }

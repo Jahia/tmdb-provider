@@ -24,9 +24,6 @@
 package org.jahia.modules.provider.tmdb.binding.movies;
 
 import info.movito.themoviedbapi.model.core.MovieResultsPage;
-import info.movito.themoviedbapi.tools.TmdbException;
-import info.movito.themoviedbapi.tools.builders.discover.DiscoverMovieParamBuilder;
-import info.movito.themoviedbapi.tools.sortby.DiscoverMovieSortBy;
 import org.apache.commons.lang.StringUtils;
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalData;
@@ -45,7 +42,6 @@ import org.osgi.service.component.annotations.ServiceScope;
 
 import javax.jcr.RepositoryException;
 import javax.jcr.Value;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +53,7 @@ import java.util.stream.Collectors;
 @Component(service = { MovieNode.class, NodeBinding.class}, scope = ServiceScope.SINGLETON, immediate = true)
 public class MovieNode implements NodeBinding {
 
-    private static final String PATH_PATTERN = "^/movies/\\d{4}/\\d{2}/\\d+$";
+    private static final String PATH_PATTERN = "^/movies/\\d{4}/\\d{2}/\\d+(?:/j:translation_[a-z]{2})?$";
     private static final String ID_PATTERN = "^movie-\\d+$";
     @Reference
     private MoviesCollection movies;
@@ -94,9 +90,12 @@ public class MovieNode implements NodeBinding {
 
     @Override
     public List<ExternalData> listChildren(String path) {
+        if (PathHelper.getLeaf(path).startsWith("j:translation_")) {
+            return Collections.emptyList();
+        }
         List<ProviderData> child = credits.list(PathHelper.getLeaf(path));
         return child.stream()
-                .map(data -> data.toExternalData(new PathBuilder(path).append(StringUtils.substringAfter("-", data.getId())).build()))
+                .map(data -> data.toExternalData(new PathBuilder(path).append(StringUtils.substringAfterLast(data.getId(), "-")).build()))
                 .collect(Collectors.toList());
     }
 

@@ -50,7 +50,7 @@ public class CategoriesCollectionTest {
     @Test
     public void testGetRootItem() {
         ExternalData data = collection.getData("cid-root").toExternalData("/");
-        LOGGER.info("Root item: {}", data);
+        LOGGER.info("Root item: {}", data.getPath());
         assertEquals(Naming.NodeType.CONTENT_FOLDER, data.getType());
         assertEquals("cid-root", data.getId());
         assertEquals("/", data.getPath());
@@ -62,7 +62,7 @@ public class CategoriesCollectionTest {
     @Test
     public void testGetMoviesItem() {
         ExternalData data = collection.getData("cid-movies").toExternalData("/movies");
-        LOGGER.info("Movies item: {}", data);
+        LOGGER.info("Movies item: {}", data.getPath());
         assertEquals(Naming.NodeType.CONTENT_FOLDER, data.getType());
         assertEquals("cid-movies", data.getId());
         assertEquals("/movies", data.getPath());
