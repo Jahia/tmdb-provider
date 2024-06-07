@@ -94,9 +94,9 @@ public class MovieNode implements NodeBinding {
 
     @Override
     public List<ExternalData> listChildren(String path) {
-        List<ProviderData> child = credits.list(MoviesCollection.ID_PREFIX.concat(PathHelper.getLeaf(path)));
+        List<ProviderData> child = credits.list(PathHelper.getLeaf(path));
         return child.stream()
-                .map(data -> data.toExternalData(new PathBuilder(path).append(data.getId()).build()))
+                .map(data -> data.toExternalData(new PathBuilder(path).append(StringUtils.substringAfter("-", data.getId())).build()))
                 .collect(Collectors.toList());
     }
 
@@ -127,6 +127,7 @@ public class MovieNode implements NodeBinding {
         if (data.getProperties().containsKey("release_date")) {
             dateParts = data.getProperties().get("release_date")[0].split("-");
         }
-        return new PathBuilder("movies").append(dateParts[0]).append(dateParts[1]).append(data.getId()).build();
+        String localid = data.getId().substring(MoviesCollection.ID_PREFIX.length());
+        return new PathBuilder("movies").append(dateParts[0]).append(dateParts[1]).append(localid).build();
     }
 }

@@ -21,38 +21,36 @@
  *
  * ==========================================================================================
  */
-package org.jahia.modules.provider.tmdb.binding.movies;
+package org.jahia.modules.provider.tmdb.binding.persons;
 
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.provider.tmdb.binding.NodeBinding;
-import org.jahia.modules.provider.tmdb.data.MonthsCollection;
-import org.jahia.modules.provider.tmdb.data.MoviesCollection;
+import org.jahia.modules.provider.tmdb.data.CategoriesCollection;
+import org.jahia.modules.provider.tmdb.data.PersonsCollection;
 import org.jahia.modules.provider.tmdb.data.ProviderData;
 import org.jahia.modules.provider.tmdb.helper.PathBuilder;
-import org.jahia.modules.provider.tmdb.helper.PathHelper;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
- * Binding for the /movies/{year}/{month} nodes.
- * That nodes will list the alphabet letters we want to bind movies for in the browsing tree.
+ * Mapper for /persons/{person} node of the provider.
  *
  * @author Jerome Blanchard
  */
-@Component(service = { MonthsNode.class, NodeBinding.class}, scope = ServiceScope.SINGLETON, immediate = true)
-public class MonthsNode implements NodeBinding {
+@Component(service = { PersonNode.class, NodeBinding.class}, scope = ServiceScope.SINGLETON, immediate = true)
+public class PersonNode implements NodeBinding {
 
-    private static final String PATH_PATTERN = "^/movies/\\d{4}/\\d{2}$";
-    private static final String ID_PATTERN = "^month-\\d{4}-\\d{2}$";
+    private static final String PATH_PATTERN = "^/persons/\\d+$";
+    private static final String ID_PATTERN = "^person-$";
     @Reference
-    private MonthsCollection months;
-    @Reference
-    private MoviesCollection movies;
+    private PersonsCollection persons;
+
+    public PersonNode() {
+    }
 
     @Override
     public List<String> getSupportedNodeTypes() {
@@ -71,28 +69,22 @@ public class MonthsNode implements NodeBinding {
 
     @Override
     public String findNodeId(String path) {
-        return MonthsCollection.ID_PREFIX.concat(PathHelper.getParent(path).concat("-").concat(PathHelper.getLeaf(path)));
+        return CategoriesCollection.PERSONS_ID;
     }
 
     @Override
     public ExternalData getData(String identifier) {
-        String[] id = identifier.substring(MonthsCollection.ID_PREFIX.length()).split("-");
-        String path = new PathBuilder("movies").append(id[0]).append(id[1]).build();
-        return months.getData(identifier).toExternalData(path);
+        ProviderData person = persons.getData(identifier);
+        String path = new PathBuilder("persons").append(person.getId().substring(PersonsCollection.ID_PREFIX.length())).build();
+        return person.toExternalData(path);
     }
 
     @Override
     public List<ExternalData> listChildren(String path) {
-        List<ProviderData> child = movies.list(PathHelper.getParent(path), PathHelper.getLeaf(path), "fr");
-        return child.stream()
-                .map(data -> {
-                    String moviepath = new PathBuilder(path).append(data.getId().substring(MoviesCollection.ID_PREFIX.length())).build();
-                    return data.toExternalData(moviepath, MoviesCollection.LAZY_PROPERTIES,MoviesCollection.LAZY_I18N_PROPERTIES);
-                }).collect(Collectors.toList());
+        return Collections.emptyList();
     }
 
     @Override public String[] getProperty(String identifier, String lang, String propertyName) {
         return new String[0];
     }
-
 }

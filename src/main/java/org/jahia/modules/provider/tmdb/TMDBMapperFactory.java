@@ -28,6 +28,7 @@ import org.jahia.modules.provider.tmdb.binding.RootNode;
 import org.jahia.modules.provider.tmdb.binding.genre.GenreNode;
 import org.jahia.modules.provider.tmdb.binding.genre.GenresNode;
 import org.jahia.modules.provider.tmdb.binding.movies.*;
+import org.jahia.modules.provider.tmdb.binding.persons.PersonNode;
 import org.jahia.modules.provider.tmdb.binding.persons.PersonsNode;
 import org.jahia.modules.provider.tmdb.data.CreditsCollection;
 import org.jahia.modules.provider.tmdb.data.MoviesCollection;
@@ -70,6 +71,8 @@ public class TMDBMapperFactory {
     @Reference
     private PersonsNode personsNode;
     @Reference
+    private PersonNode personNode;
+    @Reference
     private GenresNode genresNode;
     @Reference
     private GenreNode genreNode;
@@ -84,6 +87,7 @@ public class TMDBMapperFactory {
         nodeBindings.add(movieNode);
         nodeBindings.add(creditsNode);
         nodeBindings.add(personsNode);
+        nodeBindings.add(personNode);
         nodeBindings.add(genresNode);
         nodeBindings.add(genreNode);
         LOGGER.info("TMDBMapperFactory started with {} node binding", nodeBindings.size());

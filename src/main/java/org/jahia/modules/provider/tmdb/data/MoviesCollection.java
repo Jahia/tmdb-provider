@@ -108,7 +108,8 @@ public class MoviesCollection implements ProviderDataCollection {
 
     public List<ProviderData> list(String year, String month, String originLang) {
         DiscoverMovieParamBuilder builder = getBuilder(year, month, originLang);
-        Element element = cache.get(LIST_ID_CACHE_KEY);
+        String cacheKey = LIST_ID_CACHE_KEY.concat(year).concat("-").concat(month).concat("-").concat(originLang);
+        Element element = cache.get(cacheKey);
         List<String> ids = new ArrayList<>();
         if (element != null) {
             ids = (List<String>) element.getObjectValue();
@@ -121,7 +122,7 @@ public class MoviesCollection implements ProviderDataCollection {
                     page.getResults().stream().map(m -> this.map(m, "en") ).filter(Objects::nonNull).forEach(this::cache);
                     builder.page(page.getPage() + 1);
                 } while (page.getPage() < page.getTotalPages());
-                cache.put(new Element(LIST_ID_CACHE_KEY, ids));
+                cache.put(new Element(cacheKey, ids));
             } catch (Exception e) {
                 LOGGER.warn("Error while getting movies ", e);
                 return Collections.emptyList();

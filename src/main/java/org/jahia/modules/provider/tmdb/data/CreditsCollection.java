@@ -90,13 +90,13 @@ public class CreditsCollection implements ProviderDataCollection {
     }
 
     public List<ProviderData> list(String movieId) {
-        Element element = cache.get(LIST_CACHE_KEY);
+        String cacheKey = LIST_CACHE_KEY.concat(movieId);
+        Element element = cache.get(cacheKey);
         if (element != null) {
             List<String> ids = (List<String>) element.getObjectValue();
             return ids.stream().map(this::getData).collect(Collectors.toList());
         } else {
             try {
-                List<ProviderData> results = new ArrayList<>();
                 List<String> ids = new ArrayList<>();
                 Credits credits = client.getMovies().getCredits(Integer.parseInt(movieId), "en");
                 ids.addAll(credits.getCast().stream()
@@ -107,7 +107,7 @@ public class CreditsCollection implements ProviderDataCollection {
                         .collect(Collectors.toList()));
                 credits.getCast().stream().map(c-> this.map(movieId, c)).filter(Objects::nonNull).forEach(this::cache);
                 credits.getCrew().stream().map(c-> this.map(movieId, c)).filter(Objects::nonNull).forEach(this::cache);
-                cache.put(new Element(LIST_CACHE_KEY, ids));
+                cache.put(new Element(cacheKey, ids));
                 return ids.stream().map(this::getData).filter(Objects::nonNull).collect(Collectors.toList());
             } catch (Exception e) {
                 LOGGER.warn("Error while getting movies ", e);

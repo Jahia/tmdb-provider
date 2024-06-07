@@ -3,15 +3,14 @@ package org.jahia.modules.provider.tmdb;
 import org.jahia.exceptions.JahiaInitializationException;
 import org.jahia.modules.external.*;
 import org.jahia.modules.external.query.QueryHelper;
-import org.jahia.modules.provider.tmdb.data.ProviderData;
+import org.jahia.modules.provider.tmdb.binding.NodeBinding;
 import org.jahia.modules.provider.tmdb.helper.Naming;
 import org.jahia.modules.provider.tmdb.helper.PathHelper;
-import org.jahia.modules.provider.tmdb.data.ProviderDataCollection;
-import org.jahia.modules.provider.tmdb.binding.NodeBinding;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Component(service = { ExternalDataSource.class, TMDBDataSource.class }, immediate = true,
         configurationPid = "org.jahia.modules.tmdbprovider")
+@Designate(ocd = TMDBDataSourceConfig.class)
 public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.LazyProperty, ExternalDataSource.Searchable, ExternalDataSource.CanLoadChildrenInBatch {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TMDBDataSource.class);
