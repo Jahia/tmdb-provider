@@ -85,7 +85,7 @@ public class MovieNode implements NodeBinding {
 
     @Override
     public ExternalData getData(String identifier) {
-        LOGGER.info("Getting data for movie with identifier: {}", identifier);
+        LOGGER.debug("Getting data for movie with identifier: {}", identifier);
         ProviderData data = movies.getData(identifier);
         String path = buildPath(data);
         return movies.getData(identifier).toExternalData(path, MoviesCollection.LAZY_PROPERTIES, MoviesCollection.LAZY_I18N_PROPERTIES);
@@ -93,7 +93,7 @@ public class MovieNode implements NodeBinding {
 
     @Override
     public List<ExternalData> listChildren(String path) {
-        LOGGER.info("Listing children for path: {}", path);
+        LOGGER.debug("Listing children for path: {}", path);
         if (PathHelper.getLeaf(path).startsWith("j:translation_")) {
             return Collections.emptyList();
         }
@@ -105,13 +105,13 @@ public class MovieNode implements NodeBinding {
 
     @Override
     public String[] getProperty(String identifier, String propertyName) {
-        LOGGER.info("Getting property {} for movie with identifier: {}", propertyName, identifier);
+        LOGGER.debug("Getting property {} for movie with identifier: {}", propertyName, identifier);
         return movies.getData(identifier, "en", true).getProperty(propertyName);
     }
 
     @Override
     public String[] getI18nProperty(String identifier, String lang, String propertyName) {
-        LOGGER.info("Getting property {} for movie with identifier: {} and language: {}", propertyName, identifier, lang);
+        LOGGER.debug("Getting property {} for movie with identifier: {} and language: {}", propertyName, identifier, lang);
         return movies.getData(identifier, lang, true).getProperty(lang, propertyName);
     }
 

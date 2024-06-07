@@ -76,7 +76,7 @@ public class MoviesCollection implements ProviderDataCollection {
     }
 
     public ProviderData getData(String identifier, String language, boolean withLazyProperties) {
-        LOGGER.info("Getting movie {} with language: {}, including lazy props: {}", identifier, language, withLazyProperties);
+        LOGGER.debug("Getting movie {} with language: {}, including lazy props: {}", identifier, language, withLazyProperties);
         Element element = cache.get(identifier);
         ProviderData cachedData = null;
         if (element != null) {
@@ -93,7 +93,7 @@ public class MoviesCollection implements ProviderDataCollection {
             }
         }
         try {
-            LOGGER.info("Getting movie {} from TMDB", identifier);
+            LOGGER.debug("Getting movie {} from TMDB", identifier);
             int mid = Integer.parseInt(identifier.substring(ID_PREFIX.length()));
             MovieDb movie = client.getMovies().getDetails(mid, language, MovieAppendToResponse.KEYWORDS);
             ProviderData data = map(movie, language, cachedData);
@@ -106,7 +106,7 @@ public class MoviesCollection implements ProviderDataCollection {
     }
 
     public List<ProviderData> list(String year, String month, String originLang) {
-        LOGGER.info("Listing movies for year {} month {} and origin_language {}", year, month, originLang);
+        LOGGER.debug("Listing movies for year {} month {} and origin_language {}", year, month, originLang);
         String cacheKey = LIST_ID_CACHE_KEY.concat(year).concat("-").concat(month).concat("-").concat(originLang);
         Element element = cache.get(cacheKey);
         List<String> ids = new ArrayList<>();
