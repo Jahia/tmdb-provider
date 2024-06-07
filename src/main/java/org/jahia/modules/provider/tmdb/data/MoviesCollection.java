@@ -76,20 +76,24 @@ public class MoviesCollection implements ProviderDataCollection {
     }
 
     public ProviderData getData(String identifier, String language, boolean withLazyProperties) {
+        LOGGER.info("Getting movie {} with language: {}, including lazy props: {}", identifier, language, withLazyProperties);
         Element element = cache.get(identifier);
         ProviderData cachedData = null;
         if (element != null) {
             cachedData = (ProviderData) element.getObjectValue();
             if (!withLazyProperties && cachedData.hasLanguage(language)) {
+                LOGGER.info("Returning cached data for movie {}", identifier);
                 return cachedData;
             }
             if (withLazyProperties && cachedData.hasProperty("runtime")) {
                 if (cachedData.hasLanguage(language) && cachedData.hasProperty(language, "tagline")) {
+                    LOGGER.info("Returning cached data for movie {}", identifier);
                     return cachedData;
                 }
             }
         }
         try {
+            LOGGER.info("Getting movie {} from TMDB", identifier);
             int mid = Integer.parseInt(identifier.substring(ID_PREFIX.length()));
             MovieDb movie = client.getMovies().getDetails(mid, language, MovieAppendToResponse.KEYWORDS);
             ProviderData data = map(movie, language, cachedData);
@@ -102,6 +106,7 @@ public class MoviesCollection implements ProviderDataCollection {
     }
 
     public List<ProviderData> list(String year, String month, String originLang) {
+        LOGGER.info("Listing movies for year {} month {} and origin_language {}", year, month, originLang);
         String cacheKey = LIST_ID_CACHE_KEY.concat(year).concat("-").concat(month).concat("-").concat(originLang);
         Element element = cache.get(cacheKey);
         List<String> ids = new ArrayList<>();
@@ -209,7 +214,11 @@ public class MoviesCollection implements ProviderDataCollection {
                 existingData.getProperties().keySet().stream().filter(k -> !data.hasProperty(k)).forEach(k -> {
                     data.getProperties().put(k, existingData.getProperties().get(k));
                 });
-                data.getI18nProperties().putAll(existingData.getI18nProperties());
+                for (String lang : existingData.getI18nProperties().keySet()) {
+                    existingData.getI18nProperties().get(lang).keySet().stream().filter(k -> !data.hasProperty(lang, k)).forEach(k -> {
+                        data.withProperty(lang, k, existingData.getI18nProperties().get(lang).get(k));
+                    });
+                }
             }
         }
         return data;

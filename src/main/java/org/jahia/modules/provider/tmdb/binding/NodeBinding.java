@@ -42,7 +42,8 @@ public interface NodeBinding {
     List<ExternalData> listChildren(String path);
     String findNodeId(String path);
     ExternalData getData(String identifier);
-    String[] getProperty(String identifier, String lang, String propertyName);
+    String[] getProperty(String identifier, String propertyName);
+    String[] getI18nProperty(String identifier, String lang, String propertyName);
     List<String> getSupportedNodeTypes() ;
     default List<String> search(String nddeType, ExternalQuery query) {
         return Collections.emptyList();

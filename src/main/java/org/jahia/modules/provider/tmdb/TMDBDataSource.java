@@ -19,6 +19,7 @@ import javax.jcr.ItemNotFoundException;
 import javax.jcr.PathNotFoundException;
 import javax.jcr.RepositoryException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -71,14 +72,14 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      */
     @Override
     public List<String> getChildren(String path) throws RepositoryException {
-        LOGGER.debug("getChildren for path: " + path);
+        LOGGER.info("getChildren for path: " + path);
         NodeBinding mapper = mapperFactory.findNodeBindingForPath(path);
         return mapper.listChildren(path).stream().map(ExternalData::getPath).map(PathHelper::getLeaf).collect(Collectors.toList());
     }
 
     @Override
     public List<ExternalData> getChildrenNodes(String path) throws RepositoryException {
-        LOGGER.debug("getChildrenNodes for path: " + path);
+        LOGGER.info("getChildrenNodes for path: " + path);
         NodeBinding mapper = mapperFactory.findNodeBindingForPath(path);
         return mapper.listChildren(path);
     }
@@ -93,7 +94,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     @Override
     public ExternalData getItemByIdentifier(String identifier) throws ItemNotFoundException {
         try {
-            LOGGER.debug("getItemByIdentifier for identifier: " + identifier);
+            LOGGER.info("getItemByIdentifier for identifier: " + identifier);
             NodeBinding mapper = mapperFactory.findNodeBindingForIdentifier(identifier);
             return mapper.getData(identifier);
         } catch (RepositoryException e) {
@@ -111,7 +112,7 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     @Override
     public ExternalData getItemByPath(String path) throws PathNotFoundException {
         try {
-            LOGGER.debug("getItemByPath for path: " + path);
+            LOGGER.info("getItemByPath for path: " + path);
             NodeBinding mapper = mapperFactory.findNodeBindingForPath(path);
             String identifier = mapper.findNodeId(path);
             ExternalData data = mapper.getData(identifier);
@@ -157,21 +158,31 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
      * @return <code>true</code> if an item exists at <code>path</code>; otherwise returns <code>false</code>
      */
     @Override public boolean itemExists(String path) {
-        LOGGER.debug("itemExists for path: " + path);
+        LOGGER.info("itemExists for path: " + path);
         return false;
     }
 
     @Override public String[] getPropertyValues(String path, String propertyName) throws PathNotFoundException {
-        LOGGER.debug("getPropertyValues for path: " + path + ", and property: " + propertyName);
-        return getI18nPropertyValues(path, "en", propertyName);
+        try {
+            LOGGER.info("getPropertyValues for path: " + path + ", and property: " + propertyName);
+            NodeBinding mapper = mapperFactory.findNodeBindingForPath(path);
+            String identifier = mapper.findNodeId(path);
+            String[] value = mapper.getProperty(identifier, propertyName);
+            LOGGER.info("getPropertyValues returned: {}", Arrays.deepToString(value));
+            return value;
+        } catch (RepositoryException e) {
+            throw new PathNotFoundException("No item found for path: " + path, e);
+        }
     }
 
     @Override public String[] getI18nPropertyValues(String path, String lang, String propertyName) throws PathNotFoundException {
         try {
-            LOGGER.debug("getI18nPropertyValues for path: " + path);
+            LOGGER.info("getI18nPropertyValues for path: {}, and property: {}, with lang: {}", path, propertyName, lang);
             NodeBinding mapper = mapperFactory.findNodeBindingForPath(path);
             String identifier = mapper.findNodeId(path);
-            return mapper.getProperty(identifier, lang, propertyName);
+            String[] value = mapper.getI18nProperty(identifier, lang, propertyName);
+            LOGGER.info("getI18nPropertyValues returned: {}", Arrays.deepToString(value));
+            return value;
         } catch (RepositoryException e) {
             throw new PathNotFoundException("No item found for path: " + path, e);
         }

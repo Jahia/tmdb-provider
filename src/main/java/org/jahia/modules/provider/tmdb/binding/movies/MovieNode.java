@@ -39,6 +39,8 @@ import org.jahia.modules.provider.tmdb.helper.PathHelper;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jcr.RepositoryException;
 import javax.jcr.Value;
@@ -53,6 +55,7 @@ import java.util.stream.Collectors;
 @Component(service = { MovieNode.class, NodeBinding.class}, scope = ServiceScope.SINGLETON, immediate = true)
 public class MovieNode implements NodeBinding {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(MovieNode.class);
     private static final String PATH_PATTERN = "^/movies/\\d{4}/\\d{2}/\\d+(?:/j:translation_[a-z]{2})?$";
     private static final String ID_PATTERN = "^movie-\\d+$";
     @Reference
@@ -82,7 +85,7 @@ public class MovieNode implements NodeBinding {
 
     @Override
     public ExternalData getData(String identifier) {
-        String id = identifier.substring(MoviesCollection.ID_PREFIX.length());
+        LOGGER.info("Getting data for movie with identifier: {}", identifier);
         ProviderData data = movies.getData(identifier);
         String path = buildPath(data);
         return movies.getData(identifier).toExternalData(path, MoviesCollection.LAZY_PROPERTIES, MoviesCollection.LAZY_I18N_PROPERTIES);
@@ -90,6 +93,7 @@ public class MovieNode implements NodeBinding {
 
     @Override
     public List<ExternalData> listChildren(String path) {
+        LOGGER.info("Listing children for path: {}", path);
         if (PathHelper.getLeaf(path).startsWith("j:translation_")) {
             return Collections.emptyList();
         }
@@ -100,7 +104,14 @@ public class MovieNode implements NodeBinding {
     }
 
     @Override
-    public String[] getProperty(String identifier, String lang, String propertyName) {
+    public String[] getProperty(String identifier, String propertyName) {
+        LOGGER.info("Getting property {} for movie with identifier: {}", propertyName, identifier);
+        return movies.getData(identifier, "en", true).getProperty(propertyName);
+    }
+
+    @Override
+    public String[] getI18nProperty(String identifier, String lang, String propertyName) {
+        LOGGER.info("Getting property {} for movie with identifier: {} and language: {}", propertyName, identifier, lang);
         return movies.getData(identifier, lang, true).getProperty(lang, propertyName);
     }
 

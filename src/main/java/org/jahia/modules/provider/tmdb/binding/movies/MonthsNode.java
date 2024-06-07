@@ -104,7 +104,13 @@ public class MonthsNode implements NodeBinding {
                 }).collect(Collectors.toList());
     }
 
-    @Override public String[] getProperty(String identifier, String lang, String propertyName) {
+    @Override
+    public String[] getProperty(String identifier, String propertyName) {
+        return new String[0];
+    }
+
+    @Override
+    public String[] getI18nProperty(String identifier, String lang, String propertyName) {
         return new String[0];
     }
 

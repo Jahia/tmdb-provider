@@ -35,8 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Jerome Blanchard
@@ -93,9 +92,15 @@ public class MoviesCollectionTest {
         movie = collection.getData("movie-1084863", "fr", true);
         assertTrue(movie.hasProperty("popularity"));
         assertTrue(movie.hasProperty("budget"));
+        assertEquals(1, movie.getProperties().keySet().stream().filter(k -> k.equals("budget")).count());
         assertTrue(movie.hasLanguage("en"));
         assertTrue(movie.hasLanguage("fr"));
         assertTrue(movie.hasProperty("fr", "tagline"));
+        assertFalse(movie.hasProperty("en", "tagline"));
+        movie = collection.getData("movie-1084863", "en", true);
+        assertTrue(movie.hasProperty("fr", "tagline"));
+        assertTrue(movie.hasProperty("en", "tagline"));
+
 
         data = collection.list("2019", "01", "fr");
         data = collection.list("2019", "02", "fr");
