@@ -34,7 +34,7 @@ public @interface TMDBDataSourceConfig {
     @AttributeDefinition(name = "TMDB API key", defaultValue = "", description = "The API key to use for The Movie Database") String apiKey() default "";
     @AttributeDefinition(name = "TMDB Mount path", defaultValue = "/sites/systemsite/contents/tmdb", description = "The path at which "
                 + "to mount the database in the JCR") String mountPoint() default "/sites/systemsite/contents/tmdb";
-    @AttributeDefinition(name = "TMDB Movies Original Language", defaultValue = "it",
+    @AttributeDefinition(name = "TMDB Movies Original Language", defaultValue = "fr",
             description = "The original language of movies to browse") String originalLanguage() default "fr";
 
 }
