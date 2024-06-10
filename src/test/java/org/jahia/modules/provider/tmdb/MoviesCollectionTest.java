@@ -72,7 +72,7 @@ public class MoviesCollectionTest {
         long stop = System.currentTimeMillis();
         long time1 = (stop-start);
         LOGGER.info("List {} Movies in {} ms", data.size(), time1);
-        assertTrue(data.size() > 0);
+        assertFalse(data.isEmpty());
         assertTrue(data.stream().anyMatch(d -> d.getId().startsWith("movie-1001023")));
 
         start = System.currentTimeMillis();
@@ -83,7 +83,7 @@ public class MoviesCollectionTest {
         assertTrue(time2 < time1);
 
         ProviderData movie = data.stream().filter(d -> d.getId().startsWith("movie-1001023")).findFirst().orElse(null);
-        assertTrue(movie != null);
+        assertNotNull(movie);
         assertTrue(movie.hasProperty("popularity"));
         assertFalse(movie.hasProperty("budget"));
         assertTrue(movie.hasLanguage("en"));
@@ -101,11 +101,6 @@ public class MoviesCollectionTest {
         assertTrue(movie.hasProperty("fr", "tagline"));
         assertTrue(movie.hasProperty("en", "tagline"));
 
-
-        data = collection.list("2019", "01", "fr");
-        data = collection.list("2019", "02", "fr");
-        data = collection.list("2019", "03", "fr");
-        data = collection.list("2019", "04", "fr");
     }
 
     @Test

@@ -140,4 +140,11 @@ public class MovieNode implements NodeBinding {
         String localid = data.getId().substring(MoviesCollection.ID_PREFIX.length());
         return new PathBuilder("movies").append(dateParts[0]).append(dateParts[1]).append(localid).build();
     }
+
+    public static class MoviePathBuilder extends PathBuilder {
+
+        @Override public String build() {
+            return super.build();
+        }
+    }
 }

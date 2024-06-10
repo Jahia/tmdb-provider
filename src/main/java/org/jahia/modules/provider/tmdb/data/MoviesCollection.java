@@ -95,12 +95,12 @@ public class MoviesCollection implements ProviderDataCollection {
         if (element != null) {
             cachedData = (ProviderData) element.getObjectValue();
             if (!withLazyProperties && cachedData.hasLanguage(language)) {
-                LOGGER.info("Returning cached data for movie {}", identifier);
+                LOGGER.debug("Returning cached data for movie {}", identifier);
                 return cachedData;
             }
             if (withLazyProperties && cachedData.hasProperty("runtime")) {
                 if (cachedData.hasLanguage(language) && cachedData.hasProperty(language, "tagline")) {
-                    LOGGER.info("Returning cached data for movie {}", identifier);
+                    LOGGER.debug("Returning cached data for movie {}", identifier);
                     return cachedData;
                 }
             }
@@ -110,8 +110,7 @@ public class MoviesCollection implements ProviderDataCollection {
             int mid = Integer.parseInt(identifier.substring(ID_PREFIX.length()));
             MovieDb movie = client.getMovies().getDetails(mid, language, MovieAppendToResponse.KEYWORDS);
             ProviderData data = map(movie, language, cachedData);
-            cache.put(new Element(identifier, data));
-            notify(identifier, data);
+            this.cacheOrUpdate(data);
             return data;
         } catch (Exception e) {
             LOGGER.warn("Error while getting movie " + identifier, e);
@@ -136,7 +135,7 @@ public class MoviesCollection implements ProviderDataCollection {
                         LOGGER.warn("Too many movies for year {} month {}: {}", year, month, page.getTotalResults());
                     }
                     ids.addAll(page.getResults().stream().map(m -> ID_PREFIX + m.getId()).collect(Collectors.toList()));
-                    page.getResults().stream().map(m -> this.map(m, "en") ).filter(Objects::nonNull).forEach(this::cache);
+                    page.getResults().stream().map(m -> this.map(m, "en") ).filter(Objects::nonNull).forEach(this::cacheIfNotExists);
                     builder.page(page.getPage() + 1);
                 } while (page.getPage() < page.getTotalPages() || page.getPage() >= 500);
                 cache.put(new Element(cacheKey, ids));
@@ -157,7 +156,7 @@ public class MoviesCollection implements ProviderDataCollection {
                 page = client.getSearch().searchMovie(title, false, lang,null, pageNb, null, null);
                 ids.addAll(page.getResults().stream().map(m -> ID_PREFIX + m.getId()).collect(Collectors.toList()));
                 page.getResults().stream().filter(m -> !this.isCached(ID_PREFIX + m.getId()))
-                        .map(m -> this.map(m, lang) ).filter(Objects::nonNull).forEach(this::cache);
+                        .map(m -> this.map(m, lang) ).filter(Objects::nonNull).forEach(this::cacheIfNotExists);
                 pageNb++;
             } while (page.getPage() < page.getTotalPages() || ids.size() < limit);
         } catch (TmdbException e) {
@@ -177,7 +176,7 @@ public class MoviesCollection implements ProviderDataCollection {
                 page = client.getDiscover().getMovie(builder);
                 ids.addAll(page.getResults().stream().map(m -> ID_PREFIX + m.getId()).collect(Collectors.toList()));
                 page.getResults().stream().filter(m -> !this.isCached(ID_PREFIX + m.getId()))
-                        .map(m -> this.map(m, "en") ).filter(Objects::nonNull).forEach(this::cache);
+                        .map(m -> this.map(m, "en") ).filter(Objects::nonNull).forEach(this::cacheIfNotExists);
                 builder.page(page.getPage() + 1);
             } while (page.getPage() < page.getTotalPages() || ids.size() < limit || ids.size() < 200);
         } catch (TmdbException e) {
@@ -193,6 +192,7 @@ public class MoviesCollection implements ProviderDataCollection {
     }
 
     protected ProviderData map(MovieDb movie, String language, ProviderData existingData) {
+        LOGGER.debug("Mapping existing data {}", existingData);
         ProviderData data = this.map(language, movie.getId(), movie.getOriginalTitle(), movie.getAdult(), movie.getVoteAverage(),
                 movie.getVoteCount(), movie.getPopularity(), movie.getBackdropPath(), movie.getReleaseDate(), movie.getOverview(),
                 movie.getPosterPath(), movie.getTitle());
@@ -235,6 +235,7 @@ public class MoviesCollection implements ProviderDataCollection {
                 }
             }
         }
+        LOGGER.debug("Resulting mapped data {}", data);
         return data;
     }
 
@@ -277,11 +278,16 @@ public class MoviesCollection implements ProviderDataCollection {
         return cache.get(id) != null;
     }
 
-    private void cache(ProviderData data) {
+    private void cacheIfNotExists(ProviderData data) {
         if (cache.get(data.getId()) == null) {
             cache.put(new Element(data.getId(), data));
-            notify(data.getId(), data);
+            //notify(data.getId(), data);
         }
+    }
+
+    private void cacheOrUpdate(ProviderData data) {
+        cache.put(new Element(data.getId(), data));
+        //notify(data.getId(), data);
     }
 
     private void notify(String mid, ProviderData data) {
@@ -289,9 +295,7 @@ public class MoviesCollection implements ProviderDataCollection {
         JCRStoreProvider jcrStoreProvider = JCRSessionFactory.getInstance().getProviders().get("TMDBProvider");
         CompletableFuture.supplyAsync(() -> {
             try {
-                eventService.sendAddedNodes(
-                        Collections.singletonList(data.toExternalData(new PathBuilder("movies").append(mid).build())),
-                        jcrStoreProvider);
+                eventService.sendAddedNodes(Collections.singletonList(data.toExternalData(buildPath(data))), jcrStoreProvider);
             } catch (RepositoryException e) {
                 LOGGER.warn("Error while sending event for movie indexation " + mid, e);
             }
@@ -312,6 +316,19 @@ public class MoviesCollection implements ProviderDataCollection {
                 .primaryReleaseDateGte(year.concat("-").concat(month).concat("-01"))
                 .primaryReleaseDateLte(year.concat("-").concat(month).concat("-").concat(lastDay))
                 .page(1);
+    }
+
+    //Duplicated method (also in MovieNode). It should be moved in the ProviderData class maybe using a typed class with a PathBuilder
+    // included. like : data.toExternalData(new MoviePathBuilder(id, releaseDate).build())
+    // another option could be that the MoviePathBuilder will took a ProviderData that belongs to a movie, looking into the properties to
+    // find what to use and build the path internally. Thus calling (ProviderData<MoviePathBuilder> data).toExternalData() will do the same.
+    private String buildPath(ProviderData data) {
+        String[] dateParts = new String[] {"0000", "00"};
+        if (data.getProperties().containsKey("release_date")) {
+            dateParts = data.getProperties().get("release_date")[0].split("-");
+        }
+        String localid = data.getId().substring(MoviesCollection.ID_PREFIX.length());
+        return new PathBuilder("movies").append(dateParts[0]).append(dateParts[1]).append(localid).build();
     }
 
 }
