@@ -1,7 +1,8 @@
 <jnt = 'http://www.jahia.org/jahia/nt/1.0'>
 <jmix = 'http://www.jahia.org/jahia/mix/1.0'>
-
-[jnt:tokenRequest] > jnt:content, jmix:structuredContent
+<nt = 'http://www.jcp.org/jcr/nt/1.0'>
+<mix = 'http://www.jcp.org/jcr/mix/1.0'>
+<jcr = 'http://www.jcp.org/jcr/1.0'>
 
 [jnt:movie] > jnt:content, jmix:structuredContent, mix:title, jmix:tagged, jmix:keywords
  - overview (string) i18n
@@ -25,13 +26,13 @@
  + * (jnt:cast)
  + * (jnt:crew)
 
-[jnt:cast]
+[jnt:cast] > jnt:content
  - person (weakreference)
  - name (string)
  - character (string)
  - order (long)
  - cast_id (long)
- - profile (string)
+ - profile (string) fulltextsearchable=no
 
 [jnt:crew]
  - person (weakreference)
@@ -51,3 +52,11 @@
  - birthday (date)
  - deathday (date)
  - profile (string) fulltextsearchable=no
+ + rank (jnt:moviePersonRank)  = jnt:moviePersonRank autocreated
+
+[jnt:moviePersonRank] > jnt:content
+ - test (string)
+
+[jnt:movieGenre] > jnt:content, jmix:structuredContent
+  - name (string)
+
