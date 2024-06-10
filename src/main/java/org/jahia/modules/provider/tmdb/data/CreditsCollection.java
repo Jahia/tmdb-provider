@@ -23,9 +23,11 @@
  */
 package org.jahia.modules.provider.tmdb.data;
 
+import info.movito.themoviedbapi.model.core.MovieResultsPage;
 import info.movito.themoviedbapi.model.movies.Cast;
 import info.movito.themoviedbapi.model.movies.Credits;
 import info.movito.themoviedbapi.model.movies.Crew;
+import info.movito.themoviedbapi.model.people.credits.MovieCredits;
 import info.movito.themoviedbapi.tools.TmdbException;
 import net.sf.ehcache.Element;
 import org.apache.commons.lang.StringUtils;
@@ -115,42 +117,6 @@ public class CreditsCollection implements ProviderDataCollection {
             }
         }
     }
-
-    /*
-    public List<String> search(String nodeType, ExternalQuery query) throws RepositoryException {
-        Map<String, Value> m = QueryHelper.getSimpleOrConstraints(query.getConstraint());
-        String lang = QueryHelper.getLanguage(query.getConstraint());
-        List<String> results = new ArrayList<>();
-        if ( m.containsKey("id")) {
-            String id = m.get("id").getString();
-            try {
-                MovieCredits credits;
-                if (getCache().get(Naming.Cache.MOVIE_CREDITS_QUERY_CACHE_KEY_PREFIX + id) != null) {
-                    credits = (MovieCredits) getCache().get(Naming.Cache.MOVIE_CREDITS_QUERY_CACHE_KEY_PREFIX + id).getObjectValue();
-                } else {
-                    credits = getApiClient().getPeople().getMovieCredits(Integer.parseInt(id), lang);
-                    getCache().put(new Element(Naming.Cache.MOVIE_CREDITS_QUERY_CACHE_KEY_PREFIX + id, credits));
-                }
-                if (Naming.NodeType.CAST.equals(nodeType)) {
-                    credits.getCrew().stream()
-                            .filter(c -> StringUtils.isNotEmpty(c.getReleaseDate()))
-                            .map(c -> buildPath(Integer.toString(c.getId()), CAST.concat(id), c.getReleaseDate()))
-                            .forEach(results::add);
-                }
-                if (Naming.NodeType.CREW.equals(nodeType) && m.containsKey("id")) {
-                    credits.getCrew().stream()
-                            .filter(c -> StringUtils.isNotEmpty(c.getReleaseDate()))
-                            .map(c -> buildPath(Integer.toString(c.getId()), CREW.concat(id), c.getReleaseDate()))
-                            .forEach(results::add);
-                }
-            } catch (TmdbException e) {
-                throw new RepositoryException("Error while searching credits", e);
-            }
-        }
-        return results;
-    }
-
-     */
 
     protected ProviderData map(String movieId, Crew crew) {
         try {

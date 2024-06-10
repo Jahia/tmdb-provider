@@ -33,16 +33,23 @@ import info.movito.themoviedbapi.tools.sortby.DiscoverMovieSortBy;
 import net.sf.ehcache.Element;
 import org.apache.commons.lang.StringUtils;
 import org.jahia.api.Constants;
+import org.jahia.modules.external.events.EventService;
 import org.jahia.modules.provider.tmdb.TMDBCache;
 import org.jahia.modules.provider.tmdb.TMDBClient;
 import org.jahia.modules.provider.tmdb.helper.Naming;
+import org.jahia.modules.provider.tmdb.helper.PathBuilder;
+import org.jahia.osgi.BundleUtils;
+import org.jahia.services.content.JCRSessionFactory;
+import org.jahia.services.content.JCRStoreProvider;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.jcr.RepositoryException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -59,6 +66,7 @@ public class MoviesCollection implements ProviderDataCollection {
     public static final String ID_PREFIX = "movie-";
     private TMDBClient client;
     private TMDBCache cache;
+    private EventService eventService;
 
     @Reference
     public void setClient(TMDBClient client) {
@@ -68,6 +76,11 @@ public class MoviesCollection implements ProviderDataCollection {
     @Reference
     public void setCache(TMDBCache cache) {
         this.cache = cache;
+    }
+
+    @Reference
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
     }
 
     @Override
@@ -98,6 +111,7 @@ public class MoviesCollection implements ProviderDataCollection {
             MovieDb movie = client.getMovies().getDetails(mid, language, MovieAppendToResponse.KEYWORDS);
             ProviderData data = map(movie, language, cachedData);
             cache.put(new Element(identifier, data));
+            notify(identifier, data);
             return data;
         } catch (Exception e) {
             LOGGER.warn("Error while getting movie " + identifier, e);
@@ -266,28 +280,24 @@ public class MoviesCollection implements ProviderDataCollection {
     private void cache(ProviderData data) {
         if (cache.get(data.getId()) == null) {
             cache.put(new Element(data.getId(), data));
+            notify(data.getId(), data);
         }
     }
 
-    /*
-    private void notify(String mid, ExternalData data) {
-        String cacheKey = Naming.Cache.INDEXED_FULL_MOVIE_CACHE_PREFIX + mid;
-        if (getCache().get(cacheKey) == null) {
-            EventService eventService = BundleUtils.getOsgiService(EventService.class, null);
-            JCRStoreProvider jcrStoreProvider = JCRSessionFactory.getInstance().getProviders().get("TMDBProvider");
-            CompletableFuture.supplyAsync(() -> {
-                try {
-                    eventService.sendAddedNodes(Arrays.asList(data), jcrStoreProvider);
-                    getCache().put(new Element(cacheKey, "indexed"));
-                } catch (RepositoryException e) {
-                    e.printStackTrace();
-                }
-                return "eventSent";
-            });
-        }
+    private void notify(String mid, ProviderData data) {
+        EventService eventService = BundleUtils.getOsgiService(EventService.class, null);
+        JCRStoreProvider jcrStoreProvider = JCRSessionFactory.getInstance().getProviders().get("TMDBProvider");
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                eventService.sendAddedNodes(
+                        Collections.singletonList(data.toExternalData(new PathBuilder("movies").append(mid).build())),
+                        jcrStoreProvider);
+            } catch (RepositoryException e) {
+                LOGGER.warn("Error while sending event for movie indexation " + mid, e);
+            }
+            return "eventSent";
+        });
     }
-     */
-
 
     private DiscoverMovieParamBuilder getBuilder(String year, String month, String language) {
         Calendar instance = Calendar.getInstance();
