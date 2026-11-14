@@ -1,0 +1,25 @@
+{
+ "id": 119,
+ "name": "Collection A",
+ "overview": "A collection.",
+ "poster_path": "/coll.jpg",
+ "backdrop_path": "/coll-back.jpg",
+ "parts": [
+  {
+   "id": 122,
+   "release_date": "2003-12-17"
+  },
+  {
+   "id": 120,
+   "release_date": "2001-12-18"
+  },
+  {
+   "id": 999,
+   "release_date": ""
+  },
+  {
+   "id": 121,
+   "release_date": "2002-12-18"
+  }
+ ]
+}

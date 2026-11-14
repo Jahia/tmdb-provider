@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.jahia.modules</groupId>
     <artifactId>jahia-modules</artifactId>
-    <version>8.1.1.0</version>
+    <version>8.2.1.0</version>
   </parent>
   <groupId>org.jahia.demo</groupId>
   <artifactId>tmdb-provider</artifactId>
@@ -18,7 +18,7 @@
     <developerConnection>scm:git:git@github.com:tdraier/tmdb-provider.git</developerConnection>
   </scm>
   <properties>
-    <require-capability>osgi.extender;filter:="(osgi.extender=org.jahia.bundles.blueprint.extender.config)"</require-capability>
+    <maven.compiler.release>11</maven.compiler.release>
     <jahia-depends>default,bootstrap3-components,bootstrap3-core,external-provider</jahia-depends>
     <jahia-module-signature>MCwCFCR4OLwEIo3wT7hHEhcxCLRp+DJqAhQ+Rxe43QQEVcO1O8lMQ+uxoHSWgw==</jahia-module-signature>
   </properties>
@@ -26,8 +26,14 @@
     <dependency>
       <groupId>org.jahia.modules</groupId>
       <artifactId>external-provider</artifactId>
-      <version>4.7.0-SNAPSHOT</version>
+      <version>4.9.0</version>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
   <repositories>
@@ -47,6 +53,11 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+      </plugin>
+      <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <extensions>true</extensions>
@@ -61,7 +72,6 @@
               org.jahia.services.content,
               org.jahia.services.content.nodetypes,
               org.jahia.services.render,
-              com.google.common.collect,
               javax.jcr.query.qom,
               javax.servlet.http,
               net.sf.ehcache,
@@ -89,7 +99,6 @@
               org.jahia.exceptions,
               org.jahia.services,
               org.jahia.services.render.scripting,
-              org.joda.time,
               ${jahia.plugin.projectPackageImport},
               *
             </Import-Package>

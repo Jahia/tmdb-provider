@@ -1,0 +1,31 @@
+{
+ "id": 1,
+ "name": "Season 1",
+ "overview": "First season.",
+ "poster_path": "/season1.jpg",
+ "season_number": 1,
+ "air_date": "2022-09-01",
+ "vote_average": 7.0,
+ "episodes": [
+  {
+   "episode_number": 1,
+   "season_number": 1,
+   "name": "Episode One",
+   "overview": "The first episode.",
+   "air_date": "2022-09-01",
+   "runtime": 66,
+   "vote_average": 7.5,
+   "still_path": "/still1.jpg"
+  },
+  {
+   "episode_number": 2,
+   "season_number": 1,
+   "name": "Episode Two",
+   "overview": "The second episode.",
+   "air_date": "2022-09-02",
+   "runtime": 70,
+   "vote_average": 7.1,
+   "still_path": null
+  }
+ ]
+}

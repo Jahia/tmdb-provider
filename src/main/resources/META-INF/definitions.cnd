@@ -22,6 +22,8 @@
  - vote_average (double)
  - vote_count (long)
  - popularity (double)
+ - tmdb_id (long)
+ - collection (weakreference) < 'jnt:movieCollection'
  + * (jnt:cast)
  + * (jnt:crew)
 
@@ -32,6 +34,7 @@
  - order (long)
  - cast_id (long)
  - profile (string)
+ - episode_count (long)
 
 [jnt:crew]
  - person (weakreference)
@@ -39,6 +42,7 @@
  - job (string)
  - department (string) fulltextsearchable=no
  - profile (string) fulltextsearchable=no
+ - episode_count (long)
 
 [jnt:moviesList] > jnt:content, jmix:list, jmix:structuredContent, mix:title
  - poster_path (string)
@@ -51,3 +55,54 @@
  - birthday (date)
  - deathday (date)
  - profile (string) fulltextsearchable=no
+
+[jnt:movieCollection] > jnt:content, jmix:structuredContent, mix:title
+ - overview (string) i18n
+ - poster_path (string) i18n fulltextsearchable=no
+ - backdrop_path (string) fulltextsearchable=no
+ - tmdb_id (long)
+ - parts (weakreference) multiple < 'jnt:movie'
+
+[jnt:tvEpisode] > jnt:content, jmix:structuredContent, mix:title
+ - overview (string) i18n
+ - still_path (string) fulltextsearchable=no
+ - season_number (long)
+ - episode_number (long)
+ - air_date (date)
+ - runtime (long)
+ - vote_average (double)
+
+[jnt:tvSeason] > jnt:content, jmix:structuredContent, mix:title
+ - overview (string) i18n
+ - poster_path (string) i18n fulltextsearchable=no
+ - season_number (long)
+ - air_date (date)
+ - episode_count (long)
+ - vote_average (double)
+ + * (jnt:tvEpisode)
+
+[jnt:tvSeries] > jnt:content, jmix:structuredContent, mix:title, jmix:tagged, jmix:keywords
+ - overview (string) i18n
+ - tagline (string) i18n
+ - poster_path (string) i18n fulltextsearchable=no
+ - backdrop_path (string) fulltextsearchable=no
+ - original_name (string)
+ - first_air_date (date)
+ - last_air_date (date)
+ - status (string) fulltextsearchable=no
+ - series_type (string) fulltextsearchable=no
+ - in_production (boolean)
+ - number_of_seasons (long)
+ - number_of_episodes (long)
+ - episode_run_time (long) multiple
+ - networks (string) multiple fulltextsearchable=no
+ - created_by (weakreference) multiple < 'jnt:moviePerson'
+ - homepage (string) fulltextsearchable=no
+ - imdb_id (string) fulltextsearchable=no
+ - tmdb_id (long)
+ - vote_average (double)
+ - vote_count (long)
+ - popularity (double)
+ + * (jnt:tvSeason)
+ + * (jnt:cast)
+ + * (jnt:crew)

@@ -1,0 +1,22 @@
+{
+ "id": 120,
+ "cast": [
+  {
+   "cast_id": 1,
+   "id": 10,
+   "name": "Actor C",
+   "character": "Character C",
+   "order": 0,
+   "profile_path": "/actor-c.jpg"
+  }
+ ],
+ "crew": [
+  {
+   "id": 20,
+   "name": "Director D",
+   "job": "Director",
+   "department": "Directing",
+   "profile_path": null
+  }
+ ]
+}

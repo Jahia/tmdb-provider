@@ -1,0 +1,14 @@
+{
+ "id": 1,
+ "name": "Temporada 1",
+ "overview": "",
+ "season_number": 1,
+ "episodes": [
+  {
+   "episode_number": 1,
+   "season_number": 1,
+   "name": "Episodio uno",
+   "overview": ""
+  }
+ ]
+}

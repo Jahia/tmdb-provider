@@ -1,0 +1,39 @@
+{
+ "cast": [
+  {
+   "id": 1,
+   "name": "Actor A",
+   "order": 0,
+   "profile_path": "/actor.jpg",
+   "roles": [
+    {
+     "credit_id": "c1",
+     "character": "Character A",
+     "episode_count": 16
+    }
+   ],
+   "total_episode_count": 16
+  }
+ ],
+ "crew": [
+  {
+   "id": 2,
+   "name": "Crew B",
+   "department": "Writing",
+   "profile_path": null,
+   "jobs": [
+    {
+     "credit_id": "c2",
+     "job": "Writer",
+     "episode_count": 3
+    },
+    {
+     "credit_id": "c3",
+     "job": "Executive Producer",
+     "episode_count": 16
+    }
+   ],
+   "total_episode_count": 16
+  }
+ ]
+}
