@@ -121,6 +121,8 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
     static final Set<String> SEASON_LAZY_I18N_PROPERTIES = Set.of("jcr:title", "overview", "poster_path");
     static final Set<String> EPISODE_LAZY_I18N_PROPERTIES = Set.of("jcr:title", "overview");
     static final Set<String> COLLECTION_LAZY_I18N_PROPERTIES = Set.of("jcr:title", "overview", "poster_path");
+    /** The lazy properties typed long or double in the CND: their empty value is 0, as TMDB writes it. */
+    static final Set<String> NUMBER_LAZY_PROPERTIES = Set.of("runtime", "budget", "revenue");
 
     private static final String API_MOVIE = "/3/movie/";
     private static final String API_TV = "/3/tv/";
@@ -798,7 +800,12 @@ public class TMDBDataSource implements ExternalDataSource, ExternalDataSource.La
             if (StringUtils.isEmpty(value) && !DEFAULT_LANGUAGE.equals(lang)) {
                 value = i18nValue(path, DEFAULT_LANGUAGE, propertyName);
             }
-            return StringUtils.isEmpty(value) ? new String[0] : new String[]{value};
+            if (StringUtils.isEmpty(value)) {
+                // A lazy property is declared before its value is known, so it must get one: with an
+                // empty array, Jahia builds a property whose value is null, and readers fail on it.
+                value = NUMBER_LAZY_PROPERTIES.contains(propertyName) ? "0" : "";
+            }
+            return new String[]{value};
         } catch (JSONException | RepositoryException e) {
             throw new PathNotFoundException(e);
         }

@@ -158,7 +158,6 @@ class TMDBDataSourceTest {
         assertArrayEquals(new String[]{"Serie Uno"}, source.getI18nPropertyValues("/series/84773", "es", "jcr:title"));
         assertArrayEquals(new String[]{"An English overview."}, source.getI18nPropertyValues("/series/84773", "es", "overview"));
         assertArrayEquals(new String[]{IMG + "w342/poster-es.jpg"}, source.getI18nPropertyValues("/series/84773", "es", "poster_path"));
-        assertArrayEquals(new String[0], source.getI18nPropertyValues("/series/84773", "en", "tagline"));
 
         assertArrayEquals(new String[]{"Temporada 1"}, source.getI18nPropertyValues("/series/84773/season_1", "es", "jcr:title"));
         assertArrayEquals(new String[]{"Episodio uno"}, source.getI18nPropertyValues("/series/84773/season_1/episode_1", "es", "jcr:title"));
@@ -187,8 +186,20 @@ class TMDBDataSourceTest {
         assertArrayEquals(new String[]{IMG + "w1280/movie-back.jpg"}, p.get("backdrop_path"));
         assertTrue(movie.getLazyProperties().contains("runtime"));
         assertArrayEquals(new String[]{"179"}, source.getPropertyValues("/movies/2001/12/120", "runtime"));
-        assertArrayEquals(new String[0], source.getPropertyValues("/movies/2001/12/120", "homepage"));
         assertArrayEquals(new String[]{"Movie One"}, source.getI18nPropertyValues("/movies/2001/12/120", "en", "jcr:title"));
+    }
+
+    /**
+     * A lazy property is declared before its value is known. With no value, Jahia builds a property
+     * whose value is null, and a client that reads every property fails (MCP content.get).
+     */
+    @Test
+    void emptyLazyValuesStillGiveOneValue() throws RepositoryException {
+        // homepage is "" in the fixture, budget is missing, the series has no tagline in any language
+        assertArrayEquals(new String[]{""}, source.getPropertyValues("/movies/2001/12/120", "homepage"));
+        assertArrayEquals(new String[]{"0"}, source.getPropertyValues("/movies/2001/12/120", "budget"));
+        assertArrayEquals(new String[]{""}, source.getI18nPropertyValues("/series/84773", "en", "tagline"));
+        assertArrayEquals(new String[]{""}, source.getI18nPropertyValues("/series/84773", "es", "tagline"));
     }
 
     @Test
